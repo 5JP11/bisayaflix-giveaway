@@ -27,9 +27,19 @@ const winnerDisplay = document.getElementById('winner-display');
 init();
 
 async function init() {
+    console.log("Initializing BisayaFlix Giveaway...");
+    if (!supabaseUrl || !supabaseAnonKey) {
+        console.error("Supabase config missing! Check Environment Variables.");
+        return;
+    }
+    
     generateQRCode();
-    await fetchInitialEntries();
-    subscribeToChanges();
+    try {
+        await fetchInitialEntries();
+        subscribeToChanges();
+    } catch (e) {
+        console.error("Initialization failed:", e);
+    }
 }
 
 function generateQRCode() {
@@ -89,11 +99,12 @@ function showStep(stepNumber) {
 }
 
 // Step 1: Download
-downloadBtn.addEventListener('click', () => {
+downloadBtn.addEventListener('click', (e) => {
+    // Show Step 2 instantly for better mobile experience
     state.isDownloaded = true;
-    setTimeout(() => {
-        showStep(2);
-    }, 100);
+    showStep(2);
+    
+    // Note: Link still opens in new tab via target="_blank" in HTML
 });
 
 // Step 2: Registration & Upload
