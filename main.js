@@ -89,7 +89,11 @@ function subscribeToChanges() {
 // Logic: Step Transitions
 function showStep(stepNumber) {
     steps.forEach((step, index) => {
-        if (index + 1 === stepNumber) {
+        const stepIndex = index + 1;
+        if (stepIndex === stepNumber) {
+            step.classList.add('active');
+        } else if (stepNumber === 2 && stepIndex === 1) {
+            // Keep Step 1 visible when Step 2 (modal) is active
             step.classList.add('active');
         } else {
             step.classList.remove('active');
