@@ -247,37 +247,72 @@ p {
   width: fit-content;
 }
 
-/* Highlights Slider */
+/* Instruction Steps */
+.instruction-steps {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.instruction-item {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.8rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.instruction-item span {
+  background: var(--primary-gold);
+  color: var(--bg-darker);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+/* Highlights Slider (Single Image Mode) */
 .highlights-slider {
   width: 100%;
+  height: 300px;
   overflow: hidden;
-  margin-top: 1rem;
-  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  position: relative;
+  border-radius: 15px;
 }
 
 .slider-track {
   display: flex;
-  width: calc(250px * 16); /* 8 images, each duplicated once for seamless loop */
-  animation: slideScroll 30s linear infinite;
+  width: 800%; /* 8 images */
+  height: 100%;
+  animation: stepSlider 32s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .slider-track img {
-  width: 200px;
-  height: 250px;
+  width: 12.5%; /* 1/8 of 800% */
+  height: 100%;
   object-fit: cover;
-  border-radius: 12px;
-  margin-right: 15px;
-  transition: transform 0.3s ease;
-  cursor: pointer;
+  flex-shrink: 0;
 }
 
-@keyframes slideScroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(calc(-215px * 8)); }
-}
-
-.slider-track:hover {
-  animation-play-state: paused;
+@keyframes stepSlider {
+  0%, 10% { transform: translateX(0); }
+  12.5%, 22.5% { transform: translateX(-12.5%); }
+  25%, 35% { transform: translateX(-25%); }
+  37.5%, 47.5% { transform: translateX(-37.5%); }
+  50%, 60% { transform: translateX(-50%); }
+  62.5%, 72.5% { transform: translateX(-62.5%); }
+  75%, 85% { transform: translateX(-75%); }
+  87.5%, 97.5% { transform: translateX(-87.5%); }
+  100% { transform: translateX(0); }
 }
 
 /* FAQ Grid */

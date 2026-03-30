@@ -112,19 +112,19 @@ downloadBtn.addEventListener('click', (e) => {
     showStep(2);
     
     // 2. Change button text during the transition
-    downloadBtn.textContent = "🚀 Opening Store...";
+    downloadBtn.textContent = "🚀 Opening Google Play...";
     downloadBtn.classList.add('btn-outline');
 
-    // 3. Trigger Store Redirect after a 500ms delay
+    // 3. Trigger Store Redirect after a 1000ms (1 second) delay
     // This gives the user time to see the Form Pop-up first.
     setTimeout(() => {
         window.open(storeLink, '_blank');
         
         // Reset button text after navigation
         setTimeout(() => {
-            downloadBtn.textContent = "1. Download successful! (Re-open Store)";
+            downloadBtn.textContent = "👉 Open Store & Take Screenshot";
         }, 3000);
-    }, 500);
+    }, 1000);
 });
 
 // Step 2: Registration & Upload

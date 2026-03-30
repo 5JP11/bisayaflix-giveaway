@@ -13,24 +13,40 @@
     <div class="blob blob-2"></div>
 
     <div class="container">
-        <header class="logo-container">
-            <img src="/Bisayaflix-logo.png" alt="BisayaFlix Original Logo">
-            <p>The Home of Bisaya Cinema</p>
-        </header>
+        <!-- Step 1: QR & Download (TOP MOST) -->
+        <section id="step-1" class="step active">
+            <div class="card" style="text-align: center;">
+                <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem;">BisayaFlix Exclusive Giveaway!</h1>
+                <p style="font-size: 1.1rem; color: #fff; margin-bottom: 1.5rem;">Win exclusive prizes by following these 4 Simple Steps:</p>
+                
+                <div class="instruction-steps">
+                    <div class="instruction-item"><span>1</span> Download App</div>
+                    <div class="instruction-item"><span>2</span> Take Screenshot</div>
+                    <div class="instruction-item"><span>3</span> Go Back Here</div>
+                    <div class="instruction-item"><span>4</span> Register & Win!</div>
+                </div>
 
+                <div id="qrcode-container">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.8rem; color: var(--text-muted);">Scan to Share this Contest</p>
+                    <div id="qrcode"></div>
+                </div>
+
+                <a href="https://play.google.com/store/apps/details?id=com.finpeaks.bisayaflix" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="btn btn-primary" 
+                   id="download-btn">
+                   👉 1. Download & Start Entry
+                </a>
+                <p style="font-size: 0.85rem; margin-top: 1rem; color: var(--primary-gold);">Wait 1 second for the Store to open after clicking!</p>
+            </div>
+        </section>
+
+        <!-- Highlights Slider (SECOND) -->
         <section id="highlights" class="card">
-            <h2>Experience Bisaya Cinema</h2>
+            <h2 style="text-align: center;">Experience Bisaya Cinema</h2>
             <div class="highlights-slider">
                 <div class="slider-track">
-                    <img src="/cookies.png" alt="Highlight">
-                    <img src="/jayrsiaboc.png" alt="Highlight">
-                    <img src="/midnasty.png" alt="Highlight">
-                    <img src="/mistalefty.png" alt="Highlight">
-                    <img src="/winstonlee.png" alt="Highlight">
-                    <img src="/6.png" alt="Highlight">
-                    <img src="/atoni16specialperformance.png" alt="Highlight">
-                    <img src="/atoni16.png" alt="Highlight">
-                    <!-- Duplicate for infinite loop -->
                     <img src="/cookies.png" alt="Highlight">
                     <img src="/jayrsiaboc.png" alt="Highlight">
                     <img src="/midnasty.png" alt="Highlight">
@@ -43,34 +59,21 @@
             </div>
         </section>
 
+        <!-- Logo (THIRD) -->
+        <header class="logo-container">
+            <img src="/Bisayaflix-logo.png" alt="BisayaFlix Original Logo">
+            <p>The Home of Bisaya Cinema</p>
+        </header>
+
         <main id="app">
-            <!-- Step 1: QR & Download -->
-            <section id="step-1" class="step active">
-                <div class="card">
-                    <h1>Exclusive Giveaway!</h1>
-                    <p>Download the BisayaFlix app today for a chance to win exclusive prizes. 1000+ entries needed to unlock the draw!</p>
-                    
-                    <div id="qrcode-container">
-                        <p style="margin-bottom: 0.5rem; font-size: 0.8rem;">Scan to Share this Contest</p>
-                        <div id="qrcode"></div>
-                    </div>
-
-                    <a href="https://play.google.com/store/apps/details?id=com.finpeaks.bisayaflix" 
-                       target="_blank" 
-                       rel="noopener noreferrer"
-                       class="btn btn-primary" 
-                       id="download-btn">
-                       1. Download the App
-                    </a>
-                    <p style="font-size: 0.8rem; margin-top: 1rem;">Click download to unlock the registration form.</p>
-                </div>
-            </section>
-
-            <!-- Step 2: Registration -->
+            <!-- Step 2: Registration (Modal) -->
             <section id="step-2" class="step">
                 <div class="card">
-                    <h2>Registration Form</h2>
-                    <p>Enter your details and upload a screenshot of the app installed on your phone.</p>
+                    <h2 style="display: flex; justify-content: space-between; align-items: center;">
+                        Final Entry Form
+                        <button onclick="showStep(1)" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem;">&times;</button>
+                    </h2>
+                    <p>Enter your details and upload your installation proof (screenshot).</p>
                     
                     <form id="registration-form">
                         <div class="form-group">
@@ -86,10 +89,10 @@
                             <input type="tel" id="phone" placeholder="09123456789" required>
                         </div>
                         <div class="form-group">
-                            <label for="screenshot">Proof of Install (Screenshot)</label>
+                            <label for="screenshot">Proof of Install (Your Screenshot)</label>
                             <input type="file" id="screenshot" accept="image/*" required>
                         </div>
-                        <button type="submit" class="btn btn-red">2. Register & Enter Roulette</button>
+                        <button type="submit" class="btn btn-red">Complete Registration & Enter</button>
                     </form>
                 </div>
             </section>
