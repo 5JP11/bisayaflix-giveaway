@@ -138,18 +138,21 @@
         function startSpin(prize, winnerName) {
             isSpinning = true;
             prizeDisplay.textContent = prize;
-            spinSpeed = 0.5; // Initial burst
             
-            // Re-fetch names to ensure the latest are included
+            // Set a high initial spin speed
+            spinSpeed = 0.5 + Math.random() * 0.2; 
+            
             fetchRegistrants().then(() => {
                 const winnerIndex = names.indexOf(winnerName);
                 if (winnerIndex !== -1) {
-                    // Logic to land on the winner:
-                    // Determine rotation required to put winner at top pointer
-                    const step = (Math.PI * 2) / names.length;
-                    const winnerCenterAngle = winnerIndex * step + step / 2;
-                    // Formula: (Current Rotation + Required distance to align winner to top pointer)
-                    targetAngle = (Math.PI * 1.5) - winnerCenterAngle;
+                    // Calculate target angle to land winner at top (1.5 * PI)
+                    const segmentSize = (Math.PI * 2) / names.length;
+                    const winnerCenter = winnerIndex * segmentSize + (segmentSize / 2);
+                    
+                    // The landing logic: 
+                    // We want: (FinalRotation + winnerCenter) % 2PI = 1.5PI (Top)
+                    // So: FinalRotation = 1.5PI - winnerCenter
+                    targetAngle = (Math.PI * 1.5) - winnerCenter;
                 }
             });
         }

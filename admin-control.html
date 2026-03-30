@@ -40,6 +40,14 @@
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
         
+        // Simple authentication
+        const passkey = prompt("Enter Admin Passkey:");
+        if (passkey !== 'bisaya123') {
+            alert("Unauthorized access.");
+            document.body.innerHTML = "<h1>Unauthorized</h1>";
+            window.location.href = '/';
+        }
+        
         const supabaseUrl = 'https://dqmnkrrojccqvxrztthb.supabase.co';
         const supabaseAnonKey = 'sb_publishable_bBpgfYiWCneAyQ4Xzq-Bcw_OxaPKW9o'; // This should be replaced with the user's values if different
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
