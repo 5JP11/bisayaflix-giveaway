@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BisayaFlix - Live Roulette Giveaway</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #08090b; display: flex; flex-direction: column; align-items: center; min-height: 100vh; overflow-x: hidden; padding: 20px; }
+        .wheel-container { position: relative; width: 90vw; max-width: 600px; height: 90vw; max-height: 600px; margin: 40px auto; filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)); }
+        #wheel-canvas { width: 100%; height: 100%; border-radius: 50%; border: 15px solid #1a1a1a; box-sizing: border-box; background: #111; }
+        .pointer { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 30px solid transparent; border-right: 30px solid transparent; border-top: 50px solid #e50914; z-index: 10; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5)); }
+        .prize-info { text-align: center; margin-top: 20px; background: rgba(255, 255, 255, 0.05); padding: 20px; border-radius: 15px; border: 1px solid rgba(255, 255, 255, 0.1); width: 100%; max-width: 400px; }
+        #current-prize-display { font-size: 1.5rem; font-weight: 800; color: var(--primary-gold); margin-top: 10px; text-transform: uppercase; }
+        .winner-panel { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(10px); animation: fadeIn 0.5s ease; }
+        .winner-card { text-align: center; transform: scale(0.5); animation: zoomIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes zoomIn { to { transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <header class="logo-container">
+        <img src="/Bisayaflix-logo.png" alt="BisayaFlix">
+        <h1 style="font-size: 1.5rem; margin-top: 0.5rem;">Live Roulette Giveaway</h1>
+    </header>
+
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <canvas id="wheel-canvas" width="800" height="800"></canvas>
+    </div>
+
+    <div class="prize-info">
+        <div style="font-size: 0.8rem; letter-spacing: 2px; color: var(--text-muted);">CURRENT PRIZE</div>
+        <div id="current-prize-display">Waiting for Spin...</div>
+    </div>
+
+    <div id="winner-panel" class="winner-panel">
+        <div class="winner-card">
+            <h2 style="font-size: 2rem; color: var(--primary-gold);">🎉 WE HAVE A WINNER!</h2>
+            <div id="winner-name-display" style="font-size: 4rem; font-weight: 900; margin: 20px 0;">JUAN DELA CRUZ</div>
+            <p id="winner-prize-display" style="font-size: 1.5rem; color: white;">You won: <span style="font-weight: 800;">BisayaFlix Tshirt</span></p>
+            <button onclick="closeWinner()" class="btn btn-primary" style="margin-top: 40px; width: auto; padding: 15px 40px;">Close</button>
+        </div>
+    </div>
+
+    <!-- Audio Elements -->
+    <audio id="sound-tick" src="https://assets.mixkit.co/active_storage/sfx/2042/2042-preview.mp3" preload="auto"></audio>
+    <audio id="sound-win" src="https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3" preload="auto"></audio>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        import confetti from 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/+esm'
+
+        const supabaseUrl = 'https://dqmnkrrojccqvxrztthb.supabase.co';
+        const supabaseAnonKey = 'sb_publishable_bBpgfYiWCneAyQ4Xzq-Bcw_OxaPKW9o';
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        const canvas = document.getElementById('wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        const prizeDisplay = document.getElementById('current-prize-display');
+        const winnerPanel = document.getElementById('winner-panel');
+        const winnerNameText = document.getElementById('winner-name-display');
+        const winnerPrizeText = document.getElementById('winner-prize-display');
+        const soundTick = document.getElementById('sound-tick');
+        const soundWin = document.getElementById('sound-win');
+
+        let names = ["Join the Contest!"];
+        let isSpinning = false;
+        let rotation = 0;
+        let spinSpeed = 0;
+        let targetAngle = 0;
+
+        init();
+
+        async function init() {
+            await fetchRegistrants();
+            drawWheel();
+            listenForSpins();
+            animate();
+        }
+
+        async function fetchRegistrants() {
+            const { data } = await supabase.from('registrations').select('full_name');
+            if (data && data.length > 0) {
+                names = data.map(r => r.full_name);
+            }
+        }
+
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = centerX - 10;
+            const step = (Math.PI * 2) / names.length;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            names.forEach((name, i) => {
+                const startAngle = rotation + i * step;
+                const endAngle = startAngle + step;
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+
+                ctx.fillStyle = i % 2 === 0 ? '#1a1a1a' : '#111';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Draw Name (only if visible count is reasonable)
+                if (names.length < 50) {
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(startAngle + step / 2);
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = i % 2 === 0 ? 'var(--primary-gold)' : '#fff';
+                    ctx.font = 'bold 16px Inter';
+                    ctx.fillText(name.substring(0, 15), radius - 30, 5);
+                    ctx.restore();
+                }
+            });
+        }
+
+        function listenForSpins() {
+            supabase
+                .channel('roulette-room')
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
+                    const status = payload.new;
+                    if (status.is_spinning && !isSpinning) {
+                        startSpin(status.current_prize, status.winner_name);
+                    }
+                })
+                .subscribe();
+        }
+
+        function startSpin(prize, winnerName) {
+            isSpinning = true;
+            prizeDisplay.textContent = prize;
+            spinSpeed = 0.5; // Initial burst
+            
+            // Re-fetch names to ensure the latest are included
+            fetchRegistrants().then(() => {
+                const winnerIndex = names.indexOf(winnerName);
+                if (winnerIndex !== -1) {
+                    // Logic to land on the winner:
+                    // Determine rotation required to put winner at top pointer
+                    const step = (Math.PI * 2) / names.length;
+                    const winnerCenterAngle = winnerIndex * step + step / 2;
+                    // Formula: (Current Rotation + Required distance to align winner to top pointer)
+                    targetAngle = (Math.PI * 1.5) - winnerCenterAngle;
+                }
+            });
+        }
+
+        function animate() {
+            if (isSpinning) {
+                // Rotation adds spin speed
+                rotation += spinSpeed;
+                
+                // Slow down simulation
+                if (spinSpeed > 0.01) {
+                    spinSpeed *= 0.985;
+                    // Sound tick
+                    if (Math.sin(rotation * names.length) > 0.8) {
+                        soundTick.currentTime = 0;
+                        soundTick.play();
+                    }
+                } else {
+                    isSpinning = false;
+                    spinSpeed = 0;
+                    finalizeWinner();
+                }
+            } else {
+                // Idle slow rotation
+                rotation += 0.002;
+            }
+
+            drawWheel();
+            requestAnimationFrame(animate);
+        }
+
+        async function finalizeWinner() {
+            const { data } = await supabase.from('giveaway_state').select('*').eq('id', 1).single();
+            winnerNameText.textContent = data.winner_name;
+            winnerPrizeText.innerHTML = `You won: <span style="font-weight: 800;">${data.current_prize}</span>`;
+            winnerPanel.style.display = 'flex';
+            soundWin.play();
+            confetti({
+                particleCount: 200,
+                spread: 100,
+                origin: { y: 0.5 }
+            });
+        }
+
+        window.closeWinner = () => {
+            winnerPanel.style.display = 'none';
+        };
+
+    </script>
+</body>
+</html>

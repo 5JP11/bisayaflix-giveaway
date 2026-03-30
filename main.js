@@ -180,7 +180,31 @@ registrationForm.addEventListener('submit', async (e) => {
             throw new Error(`Registration Failed: ${insertError.message}. Check your table permissions (RLS).`);
         }
 
+        // 3. Sync to Google Sheets (Webhook)
+        const sheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_URL;
+        if (sheetsUrl) {
+            console.log("Syncing to Google Sheets...");
+            fetch(sheetsUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: name,
+                    email: email,
+                    phone: phone,
+                    screenshot_url: publicUrl
+                })
+            }).catch(e => console.error("Sheets Sync Error:", e));
+        }
+
+        // 4. Update UI to Step 3 (Success)
         showStep(3);
+        
+        // Show the requested confirmation alert
+        setTimeout(() => {
+            alert("✅ Successfully Registered! Remember: Save the screenshot that you downloaded the app for proof.");
+        }, 500);
+
         confetti({
             particleCount: 150,
             spread: 70,

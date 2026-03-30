@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BisayaFlix Admin - Giveaway Control</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #08090b; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .admin-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); }
+        select { width: 100%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0,0,0,0.3); color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 1.1rem; appearance: none; cursor: pointer; }
+        .spin-btn { width: 100%; background: linear-gradient(135deg, #e50914 0%, #b20710 100%); color: white; border: none; padding: 20px; border-radius: 12px; font-size: 1.5rem; font-weight: 800; cursor: pointer; border-bottom: 5px solid #8d060d; transition: all 0.2s; }
+        .spin-btn:active { border-bottom: 0; transform: translateY(5px); }
+        .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; background: rgba(255,255,255,0.1); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; color: var(--primary-gold); }
+    </style>
+</head>
+<body>
+    <div class="admin-card">
+        <div class="status-badge">Live Admin Dashboard</div>
+        <h1>🎡 Giveaway Control</h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 30px;">Select a prize and trigger the live giveaway across all public screens.</p>
+        
+        <label style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-bottom: 5px;">SELECT PRIZE</label>
+        <select id="prize-selector">
+            <option value="BisayaFlix Varsity Jacket">BisayaFlix Varsity Jacket</option>
+            <option value="BisayaFlix Tshirt">BisayaFlix Tshirt</option>
+            <option value="Totebags">Totebags</option>
+            <option value="BisayaFlix Pocketfans">BisayaFlix Pocketfans</option>
+            <option value="BisayaFlix Sticker">BisayaFlix Sticker</option>
+        </select>
+        
+        <button id="spin-btn" class="spin-btn">🎯 TRIGGER SPIN</button>
+        
+        <div id="admin-log" style="margin-top: 30px; font-size: 0.8rem; color: var(--text-muted); padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <p><strong>Recent Winners:</strong></p>
+            <ul id="winners-list" style="list-style: none; padding: 0; margin-top: 10px;"></ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        
+        const supabaseUrl = 'https://dqmnkrrojccqvxrztthb.supabase.co';
+        const supabaseAnonKey = 'sb_publishable_bBpgfYiWCneAyQ4Xzq-Bcw_OxaPKW9o'; // This should be replaced with the user's values if different
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+        const spinBtn = document.getElementById('spin-btn');
+        const prizeSelector = document.getElementById('prize-selector');
+        const winnersList = document.getElementById('winners-list');
+
+        spinBtn.addEventListener('click', async () => {
+            const prize = prizeSelector.value;
+            spinBtn.disabled = true;
+            spinBtn.textContent = "⚙️ SELECTING WINNER...";
+
+            // 1. Fetch all registrants to pick a winner
+            const { data: registrants, error: fetchError } = await supabase
+                .from('registrations')
+                .select('id, full_name');
+
+            if (fetchError || !registrants.length) {
+                alert("Error fetching registrants: " + (fetchError?.message || "No entries yet!"));
+                spinBtn.disabled = false;
+                spinBtn.textContent = "🎯 TRIGGER SPIN";
+                return;
+            }
+
+            // 2. Pick a random winner
+            const winner = registrants[Math.floor(Math.random() * registrants.length)];
+
+            // 3. Trigger the spin in the database with the winner already decided
+            spinBtn.textContent = "🚀 TRANSMITTING...";
+            const { error: updateError } = await supabase
+                .from('giveaway_state')
+                .update({ 
+                    is_spinning: true, 
+                    current_prize: prize,
+                    winner_name: winner.full_name,
+                    last_updated: new Date().toISOString()
+                })
+                .eq('id', 1);
+
+            if (updateError) {
+                alert("Error triggering spin: " + updateError.message);
+                spinBtn.disabled = false;
+                spinBtn.textContent = "🎯 TRIGGER SPIN";
+            } else {
+                // Keep button disabled for 8 seconds (duration of spin)
+                setTimeout(() => {
+                    spinBtn.disabled = false;
+                    spinBtn.textContent = "🎯 TRIGGER SPIN";
+                    
+                    // Reset spinning state after some time so it can be re-triggered
+                    supabase.from('giveaway_state').update({ is_spinning: false }).eq('id', 1);
+                }, 8000); 
+            }
+        });
+
+        // Listen for winner announcements to add to the log
+        supabase
+            .channel('winners')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
+                const state = payload.new;
+                if (!state.is_spinning && state.winner_name) {
+                    const li = document.createElement('li');
+                    li.style.marginBottom = '5px';
+                    li.innerHTML = `<span style="color:white; font-weight:700;">${state.winner_name}</span> won ${state.current_prize}`;
+                    winnersList.prepend(li);
+                }
+            })
+            .subscribe();
+
+    </script>
+</body>
+</html>
