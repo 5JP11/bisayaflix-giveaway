@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BisayaFlix Giveaway - Download & Win!</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="container">
+        <header class="logo-container">
+            <img src="/Bisayaflix-logo.png" alt="BisayaFlix Original Logo">
+            <p>The Home of Bisaya Cinema</p>
+        </header>
+
+        <section id="highlights" class="card">
+            <h2>Experience Bisaya Cinema</h2>
+            <div class="highlights-slider">
+                <div class="slider-track">
+                    <img src="/cookies.png" alt="Highlight">
+                    <img src="/jayrsiaboc.png" alt="Highlight">
+                    <img src="/midnasty.png" alt="Highlight">
+                    <img src="/mistalefty.png" alt="Highlight">
+                    <img src="/winstonlee.png" alt="Highlight">
+                    <img src="/6.png" alt="Highlight">
+                    <img src="/atoni16specialperformance.png" alt="Highlight">
+                    <img src="/atoni16.png" alt="Highlight">
+                    <!-- Duplicate for infinite loop -->
+                    <img src="/cookies.png" alt="Highlight">
+                    <img src="/jayrsiaboc.png" alt="Highlight">
+                    <img src="/midnasty.png" alt="Highlight">
+                    <img src="/mistalefty.png" alt="Highlight">
+                    <img src="/winstonlee.png" alt="Highlight">
+                    <img src="/6.png" alt="Highlight">
+                    <img src="/atoni16specialperformance.png" alt="Highlight">
+                    <img src="/atoni16.png" alt="Highlight">
+                </div>
+            </div>
+        </section>
+
+        <main id="app">
+            <!-- Step 1: QR & Download -->
+            <section id="step-1" class="step active">
+                <div class="card">
+                    <h1>Exclusive Giveaway!</h1>
+                    <p>Download the BisayaFlix app today for a chance to win exclusive prizes. 1000+ entries needed to unlock the draw!</p>
+                    
+                    <div id="qrcode-container">
+                        <p style="margin-bottom: 0.5rem; font-size: 0.8rem;">Scan to Share this Contest</p>
+                        <div id="qrcode"></div>
+                    </div>
+
+                    <a href="https://play.google.com/store/apps/details?id=com.finpeaks.bisayaflix" 
+                       target="_blank" 
+                       class="btn btn-primary" 
+                       id="download-btn">
+                       1. Download the App
+                    </a>
+                    <p style="font-size: 0.8rem; margin-top: 1rem;">Click download to unlock the registration form.</p>
+                </div>
+            </section>
+
+            <!-- Step 2: Registration -->
+            <section id="step-2" class="step">
+                <div class="card">
+                    <h2>Registration Form</h2>
+                    <p>Enter your details and upload a screenshot of the app installed on your phone.</p>
+                    
+                    <form id="registration-form">
+                        <div class="form-group">
+                            <label for="full-name">Full Name</label>
+                            <input type="text" id="full-name" placeholder="Juan Dela Cruz" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" placeholder="juan@example.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" id="phone" placeholder="09123456789" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="screenshot">Proof of Install (Screenshot)</label>
+                            <input type="file" id="screenshot" accept="image/*" required>
+                        </div>
+                        <button type="submit" class="btn btn-red">2. Register & Enter Roulette</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Step 3: Success & Roulette -->
+            <section id="step-3" class="step">
+                <div class="card">
+                    <h1 style="color: var(--success-green); -webkit-text-fill-color: var(--success-green);">You're In!</h1>
+                    <p>Your name has been added to the live roulette. Stay tuned as we reach 1000+ entries!</p>
+                    
+                    <div class="roulette-container" id="roulette-list">
+                        <!-- Entries added dynamically -->
+                    </div>
+
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <span id="entry-count" style="font-size: 1.5rem; font-weight: 800; color: var(--primary-gold);">0</span>
+                        <p style="font-size: 0.8rem;">Current Registrations</p>
+                    </div>
+
+                    <button id="admin-trigger" style="opacity: 0.1; cursor: default; background: none; border: none; width: 100%; height: 20px;"></button>
+                </div>
+            </section>
+        </main>
+
+        <section id="faq" class="card">
+            <h2>Frequently Asked Questions</h2>
+            <div class="faq-grid">
+                <img src="/faq1.png" alt="FAQ 1">
+                <img src="/faq2.png" alt="FAQ 2">
+                <img src="/faq3.png" alt="FAQ 3">
+                <img src="/faq4.png" alt="FAQ 4">
+            </div>
+        </section>
+    </div>
+
+    <!-- Winner Modal -->
+    <div id="winner-modal" class="modal">
+        <div class="modal-content">
+            <h2>🏆 WE HAVE A WINNER! 🏆</h2>
+            <div id="winner-display" class="winner-name">---</div>
+            <p>Congratulations! Our team will contact you shortly.</p>
+            <button class="btn btn-primary" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script type="module" src="/main.js"></script>
+</body>
+</html>
