@@ -141,22 +141,31 @@ registrationForm.addEventListener('submit', async (e) => {
         const fileInput = document.getElementById('screenshot');
         const file = fileInput.files[0];
 
+        if (!supabaseUrl || !supabaseAnonKey) {
+            throw new Error("Supabase Config Error: URL or Key is missing from Environment Variables.");
+        }
+
         // 1. Upload Screenshot to Supabase Storage
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `entries/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
+        console.log("Attempting upload to bucket 'screenshots'...");
+        const { data: uploadData, error: uploadError } = await supabase.storage
             .from('screenshots')
             .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+            console.error("Upload Error Details:", uploadError);
+            throw new Error(`Upload Failed: ${uploadError.message}. Make sure the 'screenshots' bucket exists and is Public.`);
+        }
 
         const { data: { publicUrl } } = supabase.storage
             .from('screenshots')
             .getPublicUrl(filePath);
 
         // 2. Insert Record into Database
+        console.log("Attempting database entry for:", name);
         const { error: insertError } = await supabase
             .from('registrations')
             .insert([{ 
@@ -166,7 +175,10 @@ registrationForm.addEventListener('submit', async (e) => {
                 screenshot_url: publicUrl 
             }]);
 
-        if (insertError) throw insertError;
+        if (insertError) {
+            console.error("Database Error Details:", insertError);
+            throw new Error(`Registration Failed: ${insertError.message}. Check your table permissions (RLS).`);
+        }
 
         showStep(3);
         confetti({
@@ -177,9 +189,10 @@ registrationForm.addEventListener('submit', async (e) => {
         });
 
     } catch (err) {
-        alert('Error: ' + err.message);
+        console.error("FULL ERROR:", err);
+        alert('Giveaway Error: ' + err.message);
         submitBtn.disabled = false;
-        submitBtn.textContent = '2. Register & Enter Roulette';
+        submitBtn.textContent = 'Retry Registration';
     }
 });
 
