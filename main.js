@@ -104,11 +104,27 @@ function showStep(stepNumber) {
 
 // Step 1: Download
 downloadBtn.addEventListener('click', (e) => {
-    // Show Step 2 instantly for better mobile experience
+    e.preventDefault(); // Prevent immediate navigation
+    const storeLink = downloadBtn.href;
+
+    // 1. Show Step 2 instantly for better mobile experience
     state.isDownloaded = true;
     showStep(2);
     
-    // Note: Link still opens in new tab via target="_blank" in HTML
+    // 2. Change button text during the transition
+    downloadBtn.textContent = "🚀 Opening Store...";
+    downloadBtn.classList.add('btn-outline');
+
+    // 3. Trigger Store Redirect after a 500ms delay
+    // This gives the user time to see the Form Pop-up first.
+    setTimeout(() => {
+        window.open(storeLink, '_blank');
+        
+        // Reset button text after navigation
+        setTimeout(() => {
+            downloadBtn.textContent = "1. Download successful! (Re-open Store)";
+        }, 3000);
+    }, 500);
 });
 
 // Step 2: Registration & Upload
