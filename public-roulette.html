@@ -30,6 +30,15 @@
     </div>
 
     <div class="prize-info">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div id="sync-status" style="font-size: 0.6rem; color: #444; display: flex; align-items: center; gap: 5px;">
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #444;" id="sync-dot"></span>
+                SYNC OFFLINE
+            </div>
+            <div style="font-size: 0.7rem; color: var(--primary-gold); font-weight: 800;">
+                <span id="participant-count">0</span> PARTICIPANTS
+            </div>
+        </div>
         <div style="font-size: 0.8rem; letter-spacing: 2px; color: var(--text-muted);">CURRENT PRIZE</div>
         <div id="current-prize-display">Waiting for Spin...</div>
     </div>
@@ -99,9 +108,15 @@
         async function fetchRegistrants() {
             const { data, error } = await supabase.from('registrations').select('full_name').order('created_at', { ascending: false });
             if (error) console.error('Fetch Registrants Error:', error);
-            if (data && data.length > 0) {
-                names = data.map(r => r.full_name);
+            if (data) {
+                names = data.length > 0 ? data.map(r => r.full_name) : ["Join the Contest!"];
+                updateParticipantUI();
             }
+        }
+
+        function updateParticipantUI() {
+            const countEl = document.getElementById('participant-count');
+            if (countEl) countEl.textContent = names[0] === "Join the Contest!" ? 0 : names.length;
         }
 
         function drawWheel() {
@@ -147,10 +162,20 @@
                 .channel('registrations-feed')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
                     console.log("New registration received:", payload.new.full_name);
+                    if (names[0] === "Join the Contest!") names = [];
                     names.unshift(payload.new.full_name);
+                    updateParticipantUI();
                     drawWheel();
                 })
-                .subscribe();
+                .subscribe(status => {
+                    const dot = document.getElementById('sync-dot');
+                    const text = document.getElementById('sync-status');
+                    if (status === 'SUBSCRIBED') {
+                        dot.style.background = '#2ecc71';
+                        text.innerHTML = '<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2ecc71;"></span> SYNC LIVE';
+                        text.style.color = '#2ecc71';
+                    }
+                });
 
             // 2. Listen for Admin "Spin" triggers
             supabase

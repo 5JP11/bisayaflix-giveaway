@@ -102,13 +102,19 @@ function subscribeToChanges() {
         .channel('registrations-feed')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
             const newEntry = payload.new;
+            console.log("New registration received (main):", newEntry.full_name);
+            
             state.entries.unshift(newEntry);
+            
+            // Fix: remove placeholder if it's the first real entry
+            if (names[0] === "Join the Contest!") names = [];
             names.unshift(newEntry.full_name);
+            
             addEntryToRoulette(newEntry);
             updateEntryCount();
             if (canvas) drawWheel();
         })
-        .subscribe();
+        .subscribe(status => console.log('Main Registrations Sync:', status));
 
     // 2. Listen for Admin "Spin" triggers
     supabase

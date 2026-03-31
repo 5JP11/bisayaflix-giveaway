@@ -57,6 +57,11 @@
             </div>
             <p><strong>Recent Winners Log:</strong></p>
             <ul id="winners-list" style="list-style: none; padding: 0; margin-top: 10px;"></ul>
+            
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                <p style="font-size: 0.7rem; color: #666; margin-bottom: 10px;">DANGER ZONE: CLEARS SUPABASE DATABASE ENTIRELY</p>
+                <button id="wipe-data-btn" class="btn btn-outline" style="border-color: #444; color: #666; width: auto; padding: 8px 15px; font-size: 0.75rem;">Wipe All Registrants (Double-Click)</button>
+            </div>
         </div>
     </div>
 
@@ -173,15 +178,15 @@
                     ctx.translate(centerX, centerY);
                     ctx.rotate(startAngle + step / 2);
                     ctx.textAlign = 'right';
-                    ctx.fillStyle = i % 2 === 0 ? '#c5a059' : '#fff';
-                    ctx.font = `bold ${Math.max(12, 24 - names.length/5)}px Inter`;
+                    ctx.fillStyle = i % 2 === 0 ? 'var(--primary-gold)' : '#fff';
+                    ctx.font = `bold ${Math.max(12, 24 - names.length/5)}px Outfit`;
                     ctx.fillText(name.substring(0, 12), radius - 30, 5);
                     ctx.restore();
                 }
             });
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.strokeStyle = '#c5a059';
+            ctx.strokeStyle = 'var(--primary-gold)';
             ctx.lineWidth = 5;
             ctx.stroke();
         }
@@ -263,6 +268,26 @@
                 spinBtn.textContent = "🎯 TRIGGER LIVE SPIN";
                 await supabase.from('giveaway_state').update({ is_spinning: false }).eq('id', 1);
             }, 8000); 
+        });
+
+        // Wipe Data Logic
+        const wipeBtn = document.getElementById('wipe-data-btn');
+        wipeBtn.addEventListener('dblclick', async () => {
+            if (!confirm("Are you SURE you want to DELETE ALL registrants? This cannot be undone.")) return;
+            
+            wipeBtn.disabled = true;
+            wipeBtn.textContent = "Wiping...";
+            
+            const { error } = await supabase.from('registrations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            
+            if (error) {
+                alert("Error wiping data: " + error.message);
+                wipeBtn.disabled = false;
+                wipeBtn.textContent = "Wipe All Registrants (Double-Click)";
+            } else {
+                alert("All registration data has been cleared!");
+                location.reload();
+            }
         });
 
     </script>
