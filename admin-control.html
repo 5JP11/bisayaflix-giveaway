@@ -27,6 +27,12 @@
             <div id="roulette-status" style="margin-top: 10px; font-weight: 700; color: var(--primary-gold); min-height: 24px;">
                 Waiting for Spin...
             </div>
+            
+            <!-- Initialize Failsafe -->
+            <div id="setup-alert" style="display: none; margin-top: 20px; padding: 15px; background: rgba(229, 9, 20, 0.2); border: 1px solid #e50914; border-radius: 10px; text-align: center;">
+                <p style="color: #ff9999; margin-bottom: 10px; font-size: 0.9rem;">⚠️ Database record ID=1 is missing.</p>
+                <button id="init-db-btn" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.9rem;">FIX DATABASE NOW</button>
+            </div>
         </div>
 
         <!-- 2. Controls in the Middle -->
@@ -106,8 +112,9 @@
             // Critical Diagnostic: Check if giveaway_state has ID=1
             const { data: checkState, error: stateError } = await supabase.from('giveaway_state').select('*').eq('id', 1).single();
             if (stateError) {
-                console.error("❌ GIVEAWAY_STATE ERROR: id=1 not found. This will prevent triggering spins.", stateError.message);
-                alert("Database state issue detected! ID=1 record is missing from giveaway_state.");
+                console.error("❌ GIVEAWAY_STATE ERROR: id=1 not found.", stateError.message);
+                document.getElementById('setup-alert').style.display = 'block';
+                document.getElementById('init-db-btn').addEventListener('click', initializeSystem);
             } else {
                 console.log("✅ Admin System Status Ready. Current State:", checkState.is_spinning ? "SPINNING" : "IDLE");
             }
@@ -116,6 +123,25 @@
             drawWheel();
             animate();
             listenForSpins();
+        }
+
+        async function initializeSystem() {
+            const btn = document.getElementById('init-db-btn');
+            btn.disabled = true;
+            btn.textContent = "Fixing...";
+            
+            const { error } = await supabase.from('giveaway_state').insert([
+                { id: 1, is_spinning: false, current_prize: 'None', winner_name: 'None' }
+            ]);
+
+            if (error) {
+                alert("Error fixing database: " + error.message);
+                btn.disabled = false;
+                btn.textContent = "FIX DATABASE NOW";
+            } else {
+                alert("✅ Database fixed! Refreshing page...");
+                location.reload();
+            }
         }
 
         async function fetchRegistrants() {
