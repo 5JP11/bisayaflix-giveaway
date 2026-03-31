@@ -75,18 +75,32 @@
     <script type="module">
         import { createClient } from '@supabase/supabase-js'
         
+        console.log("🛠️ Admin script module loaded.");
+        
         // Simple authentication
         const passkey = prompt("Enter Admin Passkey:");
         if (passkey !== 'bisaya123') {
             alert("Unauthorized access.");
-            document.body.innerHTML = "<h1>Unauthorized</h1>";
+            document.body.innerHTML = "<div class='admin-card' style='text-align:center;'><h1>❌ Unauthorized</h1><p>Please refresh and enter the correct passkey.</p></div>";
             window.location.href = '/';
+            // Stop additional execution
+            throw new Error("Unauthorized");
         }
         
+        let supabase;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY; 
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+        try {
+            if (!supabaseUrl || !supabaseAnonKey) {
+                console.warn("⚠️ Supabase URL or Anon Key missing in environment.");
+            } else {
+                supabase = createClient(supabaseUrl, supabaseAnonKey);
+                console.log("🔗 Supabase Client initialized.");
+            }
+        } catch (e) {
+            console.error("❌ Failed to initialize Supabase:", e);
+        }
         const spinBtn = document.getElementById('spin-btn');
         const prizeSelector = document.getElementById('prize-selector');
         const winnersList = document.getElementById('winners-list');
@@ -113,12 +127,12 @@
 
         async function init() {
             console.log("🚀 Initializing Admin Control...");
-            if (!supabaseUrl || !supabaseAnonKey) {
-                console.error("❌ CRITICAL: Supabase config missing! Check your Vercel Environment Variables or local .env file.");
-                alert("Admin System is not connected. Please check configuration.");
+            if (!supabase) {
+                console.error("❌ CRITICAL: Supabase client not initialized! Check Vercel env or .env file.");
+                alert("Admin System is not connected. Missing API configuration.");
                 return;
             }
-            console.log("✅ Supabase Connected to:", supabaseUrl);
+            console.log("✅ Supabase connection attempt for:", supabaseUrl);
 
             const { data: checkState, error: stateError } = await supabase.from('giveaway_state').select('*').eq('id', 1).single();
             if (stateError) {

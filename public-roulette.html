@@ -238,13 +238,15 @@
                 const winnerIndex = names.indexOf(winnerName);
                 if (winnerIndex !== -1) {
                     const segmentSize = (Math.PI * 2) / names.length;
-                    const winnerCenter = winnerIndex * segmentSize + (segmentSize / 2);
                     
+                    // Centering winner slice under pointer (1.5 * PI)
+                    const winnerCenter = (winnerIndex * segmentSize) + (segmentSize / 2);
                     targetAngle = (Math.PI * 1.5) - winnerCenter;
+                    
                     while (targetAngle < 0) targetAngle += Math.PI * 2;
                     targetAngle %= Math.PI * 2;
 
-                    const extraSpins = 5 + Math.floor(Math.random() * 5);
+                    const extraSpins = 7 + Math.floor(Math.random() * 5);
                     let dist = targetAngle - startRotation;
                     while (dist < 0) dist += Math.PI * 2;
                     totalRotation = (extraSpins * Math.PI * 2) + dist;
@@ -258,14 +260,20 @@
             if (isSpinning) {
                 const elapsed = now - spinStartTime;
                 const progress = Math.min(elapsed / SPIN_DURATION, 1);
-                const easeOutCubic = 1 - Math.pow(1 - progress, 3);
                 
-                rotation = startRotation + (totalRotation * easeOutCubic);
+                // quintic out for much smoother, more physical deceleration
+                const easeOutQuint = 1 - Math.pow(1 - progress, 5);
+                
+                rotation = startRotation + (totalRotation * easeOutQuint);
 
                 const currentStep = Math.floor((rotation * names.length) / (Math.PI * 2));
                 if (currentStep !== animate.lastStep) {
-                    soundTick.currentTime = 0;
-                    soundTick.play().catch(() => {});
+                    if (soundTick) {
+                        soundTick.currentTime = 0;
+                        // Fade out sound volume as it slows down
+                        soundTick.volume = Math.max(0.1, 1 - progress);
+                        soundTick.play().catch(() => {});
+                    }
                     animate.lastStep = currentStep;
                 }
 
