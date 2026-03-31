@@ -269,9 +269,14 @@
                     ctx.translate(centerX, centerY);
                     ctx.rotate(startAngle + step / 2);
                     ctx.textAlign = 'right';
+                    ctx.textBaseline = 'middle';
                     ctx.fillStyle = i % 2 === 0 ? '#c5a059' : '#fff';
-                    ctx.font = `bold ${Math.max(12, 24 - names.length/5)}px Outfit`;
-                    ctx.fillText(name.substring(0, 12), radius - 30, 5);
+                    
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                    ctx.shadowBlur = 2;
+                    
+                    ctx.font = `800 ${Math.max(12, 24 - names.length/5)}px Inter`;
+                    ctx.fillText(name.toUpperCase().substring(0, 12), radius - 30, 0);
                     ctx.restore();
                 }
             });
