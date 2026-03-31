@@ -15,27 +15,48 @@
     </style>
 </head>
 <body>
-    <div class="admin-card">
+    <div class="admin-card" style="max-width: 800px;">
         <div class="status-badge">Live Admin Dashboard</div>
-        <h1>🎡 Giveaway Control</h1>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 30px;">Select a prize and trigger the live giveaway across all public screens.</p>
         
-        <label style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-bottom: 5px;">SELECT PRIZE</label>
-        <select id="prize-selector">
-            <option value="BisayaFlix Varsity Jacket">BisayaFlix Varsity Jacket</option>
-            <option value="BisayaFlix Tshirt">BisayaFlix Tshirt</option>
-            <option value="Totebags">Totebags</option>
-            <option value="BisayaFlix Pocketfans">BisayaFlix Pocketfans</option>
-            <option value="BisayaFlix Sticker">BisayaFlix Sticker</option>
-        </select>
+        <!-- 1. Live Roulette at the Top -->
+        <div class="wheel-section" style="text-align: center; margin-bottom: 30px;">
+            <div class="wheel-container" style="position: relative; width: 100%; max-width: 400px; height: 400px; margin: 0 auto; overflow: hidden;">
+                <div class="pointer" style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid #e50914; z-index: 10;"></div>
+                <canvas id="wheel-canvas" width="800" height="800" style="width: 100%; height: 100%;"></canvas>
+            </div>
+            <div id="roulette-status" style="margin-top: 10px; font-weight: 700; color: var(--primary-gold); min-height: 24px;">
+                Waiting for Spin...
+            </div>
+        </div>
+
+        <!-- 2. Controls in the Middle -->
+        <div class="controls-section" style="padding: 20px; background: rgba(255,255,255,0.03); border-radius: 15px; border: 1px solid rgba(255,255,255,0.05);">
+            <h1>🎡 Giveaway Control</h1>
+            <label style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-bottom: 5px;">SELECT PRIZE TO GIVE AWAY</label>
+            <select id="prize-selector">
+                <option value="BisayaFlix Varsity Jacket">BisayaFlix Varsity Jacket</option>
+                <option value="BisayaFlix Tshirt">BisayaFlix Tshirt</option>
+                <option value="Totebags">Totebags</option>
+                <option value="BisayaFlix Pocketfans">BisayaFlix Pocketfans</option>
+                <option value="BisayaFlix Sticker">BisayaFlix Sticker</option>
+            </select>
+            <button id="spin-btn" class="spin-btn">🎯 TRIGGER LIVE SPIN</button>
+        </div>
         
-        <button id="spin-btn" class="spin-btn">🎯 TRIGGER SPIN</button>
-        
-        <div id="admin-log" style="margin-top: 30px; font-size: 0.8rem; color: var(--text-muted); padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <p><strong>Recent Winners:</strong></p>
+        <!-- 3. Winners & Announcement at the Bottom -->
+        <div id="admin-log" style="margin-top: 30px; font-size: 0.9rem; color: var(--text-muted); padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div id="latest-winner-announcement" style="text-align: center; margin-bottom: 20px; display: none;">
+                <h2 style="color: var(--primary-gold); margin-bottom: 0;">🎉 RECENT WINNER!</h2>
+                <div id="winner-name-highlight" style="font-size: 2.5rem; font-weight: 900; color: white;">---</div>
+            </div>
+            <p><strong>Recent Winners Log:</strong></p>
             <ul id="winners-list" style="list-style: none; padding: 0; margin-top: 10px;"></ul>
         </div>
     </div>
+
+    <!-- Audio for Admin Feedback -->
+    <audio id="sound-tick" src="https://assets.mixkit.co/active_storage/sfx/2042/2042-preview.mp3" preload="auto"></audio>
+    <audio id="sound-win" src="https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3" preload="auto"></audio>
 
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
@@ -49,74 +70,150 @@
         }
         
         const supabaseUrl = 'https://dqmnkrrojccqvxrztthb.supabase.co';
-        const supabaseAnonKey = 'sb_publishable_bBpgfYiWCneAyQ4Xzq-Bcw_OxaPKW9o'; // This should be replaced with the user's values if different
+        const supabaseAnonKey = 'sb_publishable_bBpgfYiWCneAyQ4Xzq-Bcw_OxaPKW9o'; 
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
         const spinBtn = document.getElementById('spin-btn');
         const prizeSelector = document.getElementById('prize-selector');
         const winnersList = document.getElementById('winners-list');
+        const winnerHighlight = document.getElementById('winner-name-highlight');
+        const announcement = document.getElementById('latest-winner-announcement');
+
+        // Roulette Canvas Logic
+        const canvas = document.getElementById('wheel-canvas');
+        const ctx = canvas.getContext('2d');
+        const soundTick = document.getElementById('sound-tick');
+        const soundWin = document.getElementById('sound-win');
+        const rouletteStatus = document.getElementById('roulette-status');
+
+        let names = ["Join the Contest!"];
+        let isSpinning = false;
+        let rotation = 0;
+        let spinSpeed = 0;
+        let targetAngle = 0;
+
+        init();
+
+        async function init() {
+            await fetchRegistrants();
+            drawWheel();
+            animate();
+            listenForSpins();
+        }
+
+        async function fetchRegistrants() {
+            const { data } = await supabase.from('registrations').select('full_name');
+            if (data && data.length > 0) names = data.map(r => r.full_name);
+        }
+
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = centerX - 10;
+            const step = (Math.PI * 2) / names.length;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            names.forEach((name, i) => {
+                const startAngle = rotation + i * step;
+                const endAngle = startAngle + step;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.fillStyle = i % 2 === 0 ? '#1a1a1a' : '#111';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.stroke();
+
+                if (names.length < 60) {
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate(startAngle + step / 2);
+                    ctx.textAlign = 'right';
+                    ctx.fillStyle = i % 2 === 0 ? '#c5a059' : '#fff';
+                    ctx.font = `bold ${Math.max(12, 24 - names.length/5)}px Inter`;
+                    ctx.fillText(name.substring(0, 12), radius - 30, 5);
+                    ctx.restore();
+                }
+            });
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = '#c5a059';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+        }
+
+        function animate() {
+            if (isSpinning) {
+                rotation += spinSpeed;
+                if (spinSpeed > 0.01) {
+                    spinSpeed *= 0.985;
+                    if (Math.sin(rotation * names.length) > 0.9) {
+                        soundTick.currentTime = 0;
+                        soundTick.play();
+                    }
+                } else {
+                    isSpinning = false;
+                    spinSpeed = 0;
+                    soundWin.play();
+                }
+            } else {
+                rotation += 0.002;
+            }
+            drawWheel();
+            requestAnimationFrame(animate);
+        }
+
+        function listenForSpins() {
+            supabase.channel('roulette-room').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
+                const status = payload.new;
+                if (status.is_spinning && !isSpinning) {
+                    isSpinning = true;
+                    spinSpeed = 0.5 + Math.random() * 0.1;
+                    rouletteStatus.textContent = `🎰 SPINNING FOR: ${status.current_prize}`;
+                    fetchRegistrants();
+                } else if (!status.is_spinning && isSpinning) {
+                    // Sync winner display
+                    winnerHighlight.textContent = status.winner_name;
+                    announcement.style.display = 'block';
+                    rouletteStatus.textContent = "Spin Complete!";
+                }
+            }).subscribe();
+        }
 
         spinBtn.addEventListener('click', async () => {
             const prize = prizeSelector.value;
             spinBtn.disabled = true;
-            spinBtn.textContent = "⚙️ SELECTING WINNER...";
+            spinBtn.textContent = "⚡ TRIGGERING LIVE SPIN...";
 
-            // 1. Fetch all registrants to pick a winner
-            const { data: registrants, error: fetchError } = await supabase
-                .from('registrations')
-                .select('id, full_name');
-
-            if (fetchError || !registrants.length) {
-                alert("Error fetching registrants: " + (fetchError?.message || "No entries yet!"));
-                spinBtn.disabled = false;
-                spinBtn.textContent = "🎯 TRIGGER SPIN";
-                return;
-            }
-
-            // 2. Pick a random winner
+            // 1. Pick winner
+            const { data: registrants } = await supabase.from('registrations').select('full_name');
+            if (!registrants.length) return alert("No entrants!");
             const winner = registrants[Math.floor(Math.random() * registrants.length)];
 
-            // 3. Trigger the spin in the database with the winner already decided
-            spinBtn.textContent = "🚀 TRANSMITTING...";
-            const { error: updateError } = await supabase
-                .from('giveaway_state')
-                .update({ 
-                    is_spinning: true, 
-                    current_prize: prize,
-                    winner_name: winner.full_name,
-                    last_updated: new Date().toISOString()
-                })
-                .eq('id', 1);
+            // 2. Transmit
+            await supabase.from('giveaway_state').update({ 
+                is_spinning: true, 
+                current_prize: prize,
+                winner_name: winner.full_name,
+                last_updated: new Date().toISOString()
+            }).eq('id', 1);
 
-            if (updateError) {
-                alert("Error triggering spin: " + updateError.message);
+            setTimeout(async () => {
                 spinBtn.disabled = false;
-                spinBtn.textContent = "🎯 TRIGGER SPIN";
-            } else {
-                // Keep button disabled for 8 seconds (duration of spin)
-                setTimeout(() => {
-                    spinBtn.disabled = false;
-                    spinBtn.textContent = "🎯 TRIGGER SPIN";
-                    
-                    // Reset spinning state after some time so it can be re-triggered
-                    supabase.from('giveaway_state').update({ is_spinning: false }).eq('id', 1);
-                }, 8000); 
-            }
+                spinBtn.textContent = "🎯 TRIGGER LIVE SPIN";
+                await supabase.from('giveaway_state').update({ is_spinning: false }).eq('id', 1);
+            }, 8000); 
         });
 
-        // Listen for winner announcements to add to the log
-        supabase
-            .channel('winners')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
-                const state = payload.new;
-                if (!state.is_spinning && state.winner_name) {
-                    const li = document.createElement('li');
-                    li.style.marginBottom = '5px';
-                    li.innerHTML = `<span style="color:white; font-weight:700;">${state.winner_name}</span> won ${state.current_prize}`;
-                    winnersList.prepend(li);
-                }
-            })
-            .subscribe();
+        supabase.channel('winners').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
+            const state = payload.new;
+            if (!state.is_spinning && state.winner_name) {
+                const li = document.createElement('li');
+                li.style.cssText = "padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;";
+                li.innerHTML = `<strong style="color:var(--primary-gold);">${state.winner_name}</strong> won a <strong>${state.current_prize}</strong>`;
+                winnersList.prepend(li);
+            }
+        }).subscribe();
 
     </script>
 </body>

@@ -73,7 +73,7 @@
                         Final Entry Form
                         <button onclick="showStep(1)" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem;">&times;</button>
                     </h2>
-                    <p>Enter your details and upload your installation proof (screenshot).</p>
+                    <p>Enter your details to join the live draw. No upload required!</p>
                     
                     <form id="registration-form">
                         <div class="form-group">
@@ -88,9 +88,10 @@
                             <label for="phone">Phone Number</label>
                             <input type="tel" id="phone" placeholder="09123456789" required>
                         </div>
-                        <div class="form-group">
-                            <label for="screenshot">Proof of Install (Your Screenshot)</label>
-                            <input type="file" id="screenshot" accept="image/*" required>
+                        <div class="form-group" style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid var(--primary-gold);">
+                            <p style="font-size: 0.9rem; color: var(--primary-gold); margin: 0; font-weight: 600;">
+                                📸 Save the screenshot that you downloaded the app for proof to show us when you win!!
+                            </p>
                         </div>
                         <button type="submit" class="btn btn-red">Complete Registration & Enter</button>
                     </form>
@@ -115,6 +116,21 @@
                     <button id="admin-trigger" style="opacity: 0.1; cursor: default; background: none; border: none; width: 100%; height: 20px;"></button>
                 </div>
             </section>
+
+            <!-- Live Roulette Section (Visible to Everyone) -->
+            <section id="live-roulette" class="card" style="margin-top: 2rem; text-align: center;">
+                <h2 style="color: var(--primary-gold);">🎡 Live Giveaway Wheel</h2>
+                <p style="font-size: 0.9rem; color: var(--text-muted);">Names are added here in real-time as people register!</p>
+                
+                <div class="wheel-container" style="position: relative; width: 100%; max-width: 500px; height: 500px; margin: 20px auto; overflow: hidden;">
+                    <div class="pointer" style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-top: 35px solid #e50914; z-index: 10;"></div>
+                    <canvas id="wheel-canvas" width="800" height="800" style="width: 100%; height: 100%;"></canvas>
+                </div>
+
+                <div id="roulette-status" style="margin-top: 1rem; font-weight: 700; color: var(--primary-gold);">
+                    Waiting for next spin...
+                </div>
+            </section>
         </main>
 
         <section id="faq" class="card">
@@ -137,6 +153,10 @@
             <button class="btn btn-primary" onclick="closeModal()">Close</button>
         </div>
     </div>
+
+    <!-- Audio Elements -->
+    <audio id="sound-tick" src="https://assets.mixkit.co/active_storage/sfx/2042/2042-preview.mp3" preload="auto"></audio>
+    <audio id="sound-win" src="https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3" preload="auto"></audio>
 
     <script type="module" src="/main.js"></script>
 </body>
