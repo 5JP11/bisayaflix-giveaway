@@ -12,10 +12,28 @@
         .spin-btn { width: 100%; background: linear-gradient(135deg, #e50914 0%, #b20710 100%); color: white; border: none; padding: 20px; border-radius: 12px; font-size: 1.5rem; font-weight: 800; cursor: pointer; border-bottom: 5px solid #8d060d; transition: all 0.2s; }
         .spin-btn:active { border-bottom: 0; transform: translateY(5px); }
         .status-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; background: rgba(255,255,255,0.1); font-size: 0.8rem; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px; color: var(--primary-gold); }
+        
+        /* New Login Overlay */
+        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-darker); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(20px); }
+        .login-box { background: rgba(255,255,255,0.05); padding: 40px; border-radius: 24px; border: 1px solid var(--glass-border); text-align: center; max-width: 400px; width: 90%; }
+        .login-input { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); padding: 15px; border-radius: 12px; color: white; width: 100%; margin: 20px 0; font-size: 1rem; text-align: center; }
+        
+        /* Error Banner */
+        #error-banner { display: none; background: rgba(229, 9, 20, 0.2); border: 1px solid var(--accent-red); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; text-align: center; }
     </style>
 </head>
 <body>
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2 style="color: var(--primary-gold); margin-bottom: 10px;">Admin Access</h2>
+            <p style="font-size: 0.8rem; opacity: 0.7;">Please enter the management passkey</p>
+            <input type="password" id="passkey-input" class="login-input" placeholder="Enter Passkey">
+            <button id="login-btn" class="btn btn-primary">Unlock Dashboard</button>
+        </div>
+    </div>
+
     <div class="admin-card" style="max-width: 800px;">
+        <div id="error-banner"></div>
         <div class="status-badge">Live Admin Dashboard</div>
         
         <!-- 1. Live Roulette at the Top -->
@@ -77,29 +95,50 @@
         
         console.log("🛠️ Admin script module loaded.");
         
-        // Simple authentication
-        const passkey = prompt("Enter Admin Passkey:");
-        if (passkey !== 'bisaya123') {
-            alert("Unauthorized access.");
-            document.body.innerHTML = "<div class='admin-card' style='text-align:center;'><h1>❌ Unauthorized</h1><p>Please refresh and enter the correct passkey.</p></div>";
-            window.location.href = '/';
-            // Stop additional execution
-            throw new Error("Unauthorized");
+        const loginOverlay = document.getElementById('login-overlay');
+        const loginInput = document.getElementById('passkey-input');
+        const loginBtn = document.getElementById('login-btn');
+        const errorBanner = document.getElementById('error-banner');
+
+        function showError(msg) {
+            errorBanner.textContent = msg;
+            errorBanner.style.display = 'block';
+            console.error("Dashboard Error:", msg);
         }
-        
+
+        // Check for session
+        if (sessionStorage.getItem('admin_auth') === 'true') {
+            loginOverlay.style.display = 'none';
+        }
+
+        loginBtn.addEventListener('click', () => {
+            if (loginInput.value === 'bisaya123') {
+                sessionStorage.setItem('admin_auth', 'true');
+                loginOverlay.style.fadeOut = "0.3s";
+                setTimeout(() => loginOverlay.style.display = 'none', 300);
+                init();
+            } else {
+                alert("Incorrect passkey.");
+            }
+        });
+
+        loginInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loginBtn.click();
+        });
+
         let supabase;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY; 
 
         try {
             if (!supabaseUrl || !supabaseAnonKey) {
-                console.warn("⚠️ Supabase URL or Anon Key missing in environment.");
+                showError("⚠️ Supabase API config missing. Check your Environment Variables.");
             } else {
                 supabase = createClient(supabaseUrl, supabaseAnonKey);
                 console.log("🔗 Supabase Client initialized.");
             }
         } catch (e) {
-            console.error("❌ Failed to initialize Supabase:", e);
+            showError("❌ Failed to connect to Supabase: " + e.message);
         }
         const spinBtn = document.getElementById('spin-btn');
         const prizeSelector = document.getElementById('prize-selector');
@@ -126,22 +165,22 @@
         init();
 
         async function init() {
+            if (sessionStorage.getItem('admin_auth') !== 'true') return;
+            
             console.log("🚀 Initializing Admin Control...");
-            if (!supabase) {
-                console.error("❌ CRITICAL: Supabase client not initialized! Check Vercel env or .env file.");
-                alert("Admin System is not connected. Missing API configuration.");
-                return;
-            }
-            console.log("✅ Supabase connection attempt for:", supabaseUrl);
+            if (!supabase) return;
 
             const { data: checkState, error: stateError } = await supabase.from('giveaway_state').select('*').eq('id', 1).single();
+            
             if (stateError) {
-                console.error("❌ GIVEAWAY_STATE ERROR: id=1 not found.", stateError.message);
-                document.getElementById('setup-alert').style.display = 'block';
-                document.getElementById('init-db-btn').addEventListener('click', initializeSystem);
-            } else {
-                console.log("✅ Admin System Status Ready. Current State:", checkState.is_spinning ? "SPINNING" : "IDLE");
-            }
+                if (stateError.code === 'PGRST116' || stateError.code === '42P01') {
+                    showError("❌ Database table 'giveaway_state' not found. Please run schema.sql in Supabase.");
+                    document.getElementById('setup-alert').style.display = 'block';
+                    document.getElementById('init-db-btn').addEventListener('click', initializeSystem);
+                } else {
+                    showError("Database Error: " + stateError.message);
+                }
+            } 
 
             await fetchRegistrants();
             await fetchWinners();
