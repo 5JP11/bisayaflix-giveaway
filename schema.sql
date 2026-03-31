@@ -1,5 +1,5 @@
 -- Create the registrations table
-CREATE TABLE registrations (
+CREATE TABLE IF NOT EXISTS registrations (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   full_name text NOT NULL,
   email text NOT NULL,
@@ -9,7 +9,7 @@ CREATE TABLE registrations (
 );
 
 -- Create the winners table for persistent record keeping
-CREATE TABLE winners (
+CREATE TABLE IF NOT EXISTS winners (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   winner_name text NOT NULL,
   prize_won text NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE winners (
 );
 
 -- Create the giveaway_state table for real-time synchronization
-CREATE TABLE giveaway_state (
+CREATE TABLE IF NOT EXISTS giveaway_state (
   id integer PRIMARY KEY,
   is_spinning boolean DEFAULT false,
   current_prize text DEFAULT 'None',
