@@ -204,6 +204,53 @@ p {
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* Custom File Upload */
+.file-upload-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.file-upload-wrapper input[type="file"] {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.file-preview {
+  width: 100%;
+  min-height: 120px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px dashed var(--glass-border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 1rem;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.file-preview img {
+  max-width: 100%;
+  max-height: 150px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.file-preview.has-image {
+  border-color: var(--primary-gold);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.file-preview span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
 /* Roulette View */
 .roulette-container {
   height: 300px;

@@ -155,33 +155,68 @@ downloadBtn.addEventListener('click', (e) => {
     }, 1000);
 });
 
-// Step 2: Registration (No Screenshot Upload)
+// Step 2: Registration (With Screenshot Upload)
+const screenshotInput = document.getElementById('screenshot-file');
+const filePreview = document.getElementById('file-preview');
+
+screenshotInput?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file && filePreview) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            filePreview.innerHTML = `<img src="${event.target.result}" alt="Preview">`;
+            filePreview.classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
 registrationForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = registrationForm.querySelector('button');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Joining Live Draw...';
+    submitBtn.textContent = 'Uploading Screenshot...';
 
     try {
         const name = document.getElementById('full-name').value;
         const email = document.getElementById('email').value;
         const phone = document.getElementById('phone').value;
+        const screenshotFile = screenshotInput.files[0];
 
-        // 1. Insert Record into Database
+        if (!screenshotFile) throw new Error("Please select a screenshot first!");
+
+        // 1. Upload Screenshot to Supabase Storage
+        const fileExt = screenshotFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${name.replace(/\s+/g, '_')}.${fileExt}`;
+        const filePath = `entries/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('screenshots')
+            .upload(filePath, screenshotFile);
+
+        if (uploadError) throw new Error("Upload Failed: " + uploadError.message);
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('screenshots')
+            .getPublicUrl(filePath);
+
+        // 2. Insert Record into Database
+        submitBtn.textContent = 'Saving Registration...';
         const { error: insertError } = await supabase
             .from('registrations')
             .insert([{ 
                 full_name: name, 
                 email: email, 
-                phone: phone
+                phone: phone,
+                screenshot_url: publicUrl
             }]);
 
         if (insertError) throw insertError;
 
-        // 2. Sync to Google Sheets
+        // 3. Sync to Google Sheets
         const sheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_URL;
         if (sheetsUrl && sheetsUrl.includes('script.google.com')) {
-            console.log("Syncing to Google Sheets via text/plain to avoid CORS...");
+            console.log("Syncing to Google Sheets...");
             fetch(sheetsUrl, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -190,20 +225,13 @@ registrationForm.addEventListener('submit', async (e) => {
                     full_name: name, 
                     email: email, 
                     phone: phone,
+                    screenshot_url: publicUrl,
                     timestamp: new Date().toISOString()
                 })
-            }).then(() => console.log("Sheets Sync Success (no-cors window)."))
-              .catch(e => console.error("Sheets Sync Error:", e));
-        } else {
-            console.warn("Google Sheets URL missing or invalid. Check Environment Variables.");
+            });
         }
 
         showStep(3);
-        
-        setTimeout(() => {
-            alert("✅ Successfully Registered! Remember: Save the screenshot that you downloaded the app for proof to show us when you win!!");
-        }, 500);
-
         confetti({
             particleCount: 150,
             spread: 70,
