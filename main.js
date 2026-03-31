@@ -62,14 +62,24 @@ async function init() {
         await fetchInitialEntries();
         await fetchRecentWinners();
         subscribeToChanges();
-        
         if (canvas) {
+            setupCanvas(canvas);
             drawWheel();
             animate();
         }
     } catch (e) {
         console.error("❌ Initialization failed:", e);
     }
+}
+
+function setupCanvas(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    return ctx;
 }
 
 function generateQRCode() {
@@ -288,13 +298,15 @@ registrationForm.addEventListener('submit', async (e) => {
 
 // Roulette Wheel Logic
 function drawWheel() {
-    if (!ctx) return;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = centerX - 10;
+    if (!canvas || !ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
     const step = (Math.PI * 2) / names.length;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, rect.width, rect.height);
 
     names.forEach((name, i) => {
         const startAngle = rotation + i * step;
@@ -434,18 +446,22 @@ async function fetchRecentWinners() {
     const winnersFeed = document.getElementById('winners-feed');
     if (!winnersFeed) return;
     
+    winnersFeed.innerHTML = '';
     if (data.length === 0) {
         winnersFeed.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">No winners yet. Be the first!</p>';
         return;
     }
 
-    winnersFeed.innerHTML = '';
-    data.forEach(w => renderWinnerItem(w));
+    // Since we fetch DESC, we append them in that order to keep newest at top
+    data.forEach(w => renderWinnerItem(w, false));
 }
 
 function renderWinnerItem(w, isNew = false) {
     const winnersFeed = document.getElementById('winners-feed');
     if (!winnersFeed) return;
+
+    // Deduplication check
+    if (document.getElementById(`winner-${w.id}`)) return;
 
     // Remove placeholder if exists
     const placeholder = winnersFeed.querySelector('p');
@@ -454,6 +470,7 @@ function renderWinnerItem(w, isNew = false) {
     }
 
     const item = document.createElement('div');
+    item.id = `winner-${w.id}`;
     item.className = 'winner-item';
     const time = new Date(w.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     

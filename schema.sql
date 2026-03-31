@@ -27,3 +27,10 @@ CREATE TABLE IF NOT EXISTS giveaway_state (
 
 -- Note: You should also go to "Storage" in the sidebar, 
 -- create a bucket named "screenshots", and make it Public.
+
+-- EXTREMELY IMPORTANT: ENABLE REALTIME
+-- You must enable Realtime for the winners and registrations tables to see the dash update live.
+-- You can do this in the Dashboard (Database -> Replication) OR by running these:
+-- alter publication supabase_realtime add table registrations;
+-- alter publication supabase_realtime add table winners;
+-- alter publication supabase_realtime add table giveaway_state;
