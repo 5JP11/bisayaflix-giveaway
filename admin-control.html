@@ -102,7 +102,8 @@
         }
 
         async function fetchRegistrants() {
-            const { data } = await supabase.from('registrations').select('full_name');
+            const { data, error } = await supabase.from('registrations').select('full_name').order('created_at', { ascending: false });
+            if (error) console.error('Fetch Registrants Error (Admin):', error);
             if (data && data.length > 0) names = data.map(r => r.full_name);
         }
 
@@ -169,11 +170,13 @@
                 console.log("New registration received (Admin):", payload.new.full_name);
                 names.unshift(payload.new.full_name);
                 drawWheel();
-            }).subscribe();
+            }).subscribe(status => console.log('Registrations Sync Status:', status));
 
-            // 2. Listen for spin status updates
+            // 2. Listen for spin status updates and update the Winners log
             supabase.channel('giveaway-control').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
                 const status = payload.new;
+                console.log("State Update received:", status);
+                
                 if (status.is_spinning && !isSpinning) {
                     isSpinning = true;
                     spinSpeed = 0.5 + Math.random() * 0.1;
@@ -183,8 +186,14 @@
                     winnerHighlight.textContent = status.winner_name;
                     announcement.style.display = 'block';
                     rouletteStatus.textContent = "Spin Complete!";
+                    
+                    // Add winner to the Winners log
+                    const li = document.createElement('li');
+                    li.style.cssText = "padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;";
+                    li.innerHTML = `<strong style="color:var(--primary-gold);">${status.winner_name}</strong> won a <strong>${status.current_prize}</strong>`;
+                    winnersList.prepend(li);
                 }
-            }).subscribe();
+            }).subscribe(status => console.log('Giveaway Control Status:', status));
         }
 
         spinBtn.addEventListener('click', async () => {
@@ -193,7 +202,8 @@
             spinBtn.textContent = "⚡ TRIGGERING LIVE SPIN...";
 
             // 1. Pick winner
-            const { data: registrants } = await supabase.from('registrations').select('full_name');
+            const { data: registrants, error } = await supabase.from('registrations').select('full_name').order('created_at', { ascending: false });
+            if (error) return alert("Error picking winner: " + error.message);
             if (!registrants.length) return alert("No entrants!");
             const winner = registrants[Math.floor(Math.random() * registrants.length)];
 
@@ -211,16 +221,6 @@
                 await supabase.from('giveaway_state').update({ is_spinning: false }).eq('id', 1);
             }, 8000); 
         });
-
-        supabase.channel('giveaway-control').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
-            const state = payload.new;
-            if (!state.is_spinning && state.winner_name) {
-                const li = document.createElement('li');
-                li.style.cssText = "padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;";
-                li.innerHTML = `<strong style="color:var(--primary-gold);">${state.winner_name}</strong> won a <strong>${state.current_prize}</strong>`;
-                winnersList.prepend(li);
-            }
-        }).subscribe();
 
     </script>
 </body>

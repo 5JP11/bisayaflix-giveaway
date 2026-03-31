@@ -80,7 +80,8 @@
         }
 
         async function fetchRegistrants() {
-            const { data } = await supabase.from('registrations').select('full_name');
+            const { data, error } = await supabase.from('registrations').select('full_name').order('created_at', { ascending: false });
+            if (error) console.error('Fetch Registrants Error:', error);
             if (data && data.length > 0) {
                 names = data.map(r => r.full_name);
             }
@@ -139,11 +140,12 @@
                 .channel('giveaway-control')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
                     const status = payload.new;
+                    console.log("Spin Signal Received:", status);
                     if (status.is_spinning && !isSpinning) {
                         startSpin(status.current_prize, status.winner_name);
                     }
                 })
-                .subscribe();
+                .subscribe(s => console.log('Giveaway Control Status:', s));
         }
 
         function startSpin(prize, winnerName) {
