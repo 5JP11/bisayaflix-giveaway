@@ -178,7 +178,7 @@
                     ctx.translate(centerX, centerY);
                     ctx.rotate(startAngle + step / 2);
                     ctx.textAlign = 'right';
-                    ctx.fillStyle = i % 2 === 0 ? 'var(--primary-gold)' : '#fff';
+                    ctx.fillStyle = i % 2 === 0 ? '#c5a059' : '#fff';
                     ctx.font = `bold ${Math.max(12, 24 - names.length/5)}px Outfit`;
                     ctx.fillText(name.substring(0, 12), radius - 30, 5);
                     ctx.restore();
@@ -186,7 +186,7 @@
             });
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.strokeStyle = 'var(--primary-gold)';
+            ctx.strokeStyle = '#c5a059';
             ctx.lineWidth = 5;
             ctx.stroke();
         }
