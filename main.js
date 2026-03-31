@@ -1,5 +1,6 @@
 import QRCode from 'qrcode';
 import { createClient } from '@supabase/supabase-js';
+import confetti from 'canvas-confetti';
 
 // Supabase Configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
@@ -94,21 +95,22 @@ async function fetchInitialEntries() {
 }
 
 function subscribeToChanges() {
-    // 1. Listen for new registrations
+    // 1. Listen for new registrations to keep names in sync
     supabase
-        .channel('registrations-channel')
+        .channel('registrations-feed')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
             const newEntry = payload.new;
             state.entries.unshift(newEntry);
             names.unshift(newEntry.full_name);
             addEntryToRoulette(newEntry);
             updateEntryCount();
+            if (canvas) drawWheel();
         })
         .subscribe();
 
     // 2. Listen for Admin "Spin" triggers
     supabase
-        .channel('roulette-room')
+        .channel('giveaway-control')
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
             const status = payload.new;
             if (status.is_spinning && !isSpinning) {
@@ -176,7 +178,7 @@ registrationForm.addEventListener('submit', async (e) => {
 
         // 2. Sync to Google Sheets
         const sheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_URL;
-        if (sheetsUrl) {
+        if (sheetsUrl && sheetsUrl.includes('script.google.com')) {
             console.log("Syncing to Google Sheets via text/plain to avoid CORS...");
             fetch(sheetsUrl, {
                 method: 'POST',
@@ -190,6 +192,8 @@ registrationForm.addEventListener('submit', async (e) => {
                 })
             }).then(() => console.log("Sheets Sync Success (no-cors window)."))
               .catch(e => console.error("Sheets Sync Error:", e));
+        } else {
+            console.warn("Google Sheets URL missing or invalid. Check Environment Variables.");
         }
 
         showStep(3);

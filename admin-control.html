@@ -59,7 +59,7 @@
     <audio id="sound-win" src="https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3" preload="auto"></audio>
 
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+        import { createClient } from '@supabase/supabase-js'
         
         // Simple authentication
         const passkey = prompt("Enter Admin Passkey:");
@@ -69,8 +69,8 @@
             window.location.href = '/';
         }
         
-        const supabaseUrl = 'https://dqmnkrrojccqvxrztthb.supabase.co';
-        const supabaseAnonKey = 'sb_publishable_bBpgfYiWCneAyQ4Xzq-Bcw_OxaPKW9o'; 
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY; 
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
         const spinBtn = document.getElementById('spin-btn');
@@ -165,14 +165,14 @@
 
         function listenForSpins() {
             // 1. Listen for new entries to add to Admin wheel
-            supabase.channel('admin-sync').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
+            supabase.channel('registrations-feed').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
                 console.log("New registration received (Admin):", payload.new.full_name);
                 names.unshift(payload.new.full_name);
                 drawWheel();
             }).subscribe();
 
             // 2. Listen for spin status updates
-            supabase.channel('roulette-room').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
+            supabase.channel('giveaway-control').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
                 const status = payload.new;
                 if (status.is_spinning && !isSpinning) {
                     isSpinning = true;
@@ -212,7 +212,7 @@
             }, 8000); 
         });
 
-        supabase.channel('winners').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
+        supabase.channel('giveaway-control').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
             const state = payload.new;
             if (!state.is_spinning && state.winner_name) {
                 const li = document.createElement('li');

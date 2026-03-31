@@ -48,11 +48,11 @@
     <audio id="sound-win" src="https://assets.mixkit.co/active_storage/sfx/2020/2020-preview.mp3" preload="auto"></audio>
 
     <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
-        import confetti from 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/+esm'
+        import { createClient } from '@supabase/supabase-js'
+        import confetti from 'canvas-confetti'
 
-        const supabaseUrl = 'https://dqmnkrrojccqvxrztthb.supabase.co';
-        const supabaseAnonKey = 'sb_publishable_bBpgfYiWCneAyQ4Xzq-Bcw_OxaPKW9o';
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
         const canvas = document.getElementById('wheel-canvas');
@@ -126,7 +126,7 @@
         function listenForSpins() {
             // 1. Listen for new registrations to keep names in sync
             supabase
-                .channel('roulette-data')
+                .channel('registrations-feed')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
                     console.log("New registration received:", payload.new.full_name);
                     names.unshift(payload.new.full_name);
@@ -136,7 +136,7 @@
 
             // 2. Listen for Admin "Spin" triggers
             supabase
-                .channel('roulette-control')
+                .channel('giveaway-control')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
                     const status = payload.new;
                     if (status.is_spinning && !isSpinning) {
