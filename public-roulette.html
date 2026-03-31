@@ -167,6 +167,17 @@
                     updateParticipantUI();
                     drawWheel();
                 })
+                .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'registrations' }, payload => {
+                    console.log("Entry deleted. Refreshing list...");
+                    fetchRegistrants().then(() => drawWheel());
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, payload => {
+                    if (payload.eventType === 'DELETE' || payload.eventType === 'TRUNCATE') {
+                        names = ["Join the Contest!"];
+                        updateParticipantUI();
+                        drawWheel();
+                    }
+                })
                 .subscribe(status => {
                     const dot = document.getElementById('sync-dot');
                     const text = document.getElementById('sync-status');

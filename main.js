@@ -114,6 +114,20 @@ function subscribeToChanges() {
             updateEntryCount();
             if (canvas) drawWheel();
         })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'registrations' }, payload => {
+            console.log("Entry deleted (main). Refreshing...");
+            fetchInitialEntries().then(() => { if (canvas) drawWheel(); });
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, payload => {
+            if (payload.eventType === 'DELETE' || payload.eventType === 'TRUNCATE') {
+                console.log("Full Wipe detected (main).");
+                state.entries = [];
+                names = ["Join the Contest!"];
+                updateEntryCount();
+                renderEntries();
+                if (canvas) drawWheel();
+            }
+        })
         .subscribe(status => console.log('Main Registrations Sync:', status));
 
     // 2. Listen for Admin "Spin" triggers

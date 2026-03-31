@@ -60,7 +60,7 @@
             
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
                 <p style="font-size: 0.7rem; color: #666; margin-bottom: 10px;">DANGER ZONE: CLEARS SUPABASE DATABASE ENTIRELY</p>
-                <button id="wipe-data-btn" class="btn btn-outline" style="border-color: #444; color: #666; width: auto; padding: 8px 15px; font-size: 0.75rem;">Wipe All Registrants (Double-Click)</button>
+                <button id="wipe-data-btn" class="btn btn-outline" style="border-color: #444; color: #666; width: auto; padding: 8px 15px; font-size: 0.75rem;">Wipe All Registrants</button>
             </div>
         </div>
     </div>
@@ -216,8 +216,20 @@
             // 1. Listen for new entries to add to Admin wheel
             supabase.channel('registrations-feed').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
                 console.log("New registration received (Admin):", payload.new.full_name);
+                if (names[0] === "Join the Contest!") names = [];
                 names.unshift(payload.new.full_name);
                 drawWheel();
+            }).on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'registrations' }, payload => {
+                console.log("Registration deleted (Admin):", payload.old.id);
+                // For Wipe All, we just re-fetch everything or clear names
+                fetchRegistrants().then(() => drawWheel());
+            }).on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, payload => {
+                if (payload.eventType === 'DELETE' || payload.eventType === 'TRUNCATE') {
+                    console.log("Full Wipe/Truncate detected!");
+                    names = ["Join the Contest!"];
+                    winnersList.innerHTML = '';
+                    drawWheel();
+                }
             }).subscribe(status => console.log('Registrations Sync Status:', status));
 
             // 2. Listen for spin status updates and update the Winners log
@@ -272,20 +284,26 @@
 
         // Wipe Data Logic
         const wipeBtn = document.getElementById('wipe-data-btn');
-        wipeBtn.addEventListener('dblclick', async () => {
-            if (!confirm("Are you SURE you want to DELETE ALL registrants? This cannot be undone.")) return;
+        wipeBtn.addEventListener('click', async () => {
+            const confirmed = window.confirm("⚠️ DANGER: This will PERMANENTLY DELETE ALL registered participants. Continue?");
+            if (!confirmed) return;
             
+            const secondConfirm = window.confirm("ARE YOU 100% SURE? (Think about the Google Sheets sync too!)");
+            if (!secondConfirm) return;
+
             wipeBtn.disabled = true;
-            wipeBtn.textContent = "Wiping...";
+            wipeBtn.textContent = "Wiping Database...";
             
-            const { error } = await supabase.from('registrations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            // Delete all records where ID is not null (effectively all)
+            const { error } = await supabase.from('registrations').delete().not('id', 'is', null);
             
             if (error) {
+                console.error("Wipe error:", error);
                 alert("Error wiping data: " + error.message);
                 wipeBtn.disabled = false;
-                wipeBtn.textContent = "Wipe All Registrants (Double-Click)";
+                wipeBtn.textContent = "Wipe All Registrants";
             } else {
-                alert("All registration data has been cleared!");
+                alert("✅ All participants cleared successfully.");
                 location.reload();
             }
         });
