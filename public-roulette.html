@@ -43,6 +43,14 @@
         <div id="current-prize-display">Waiting for Spin...</div>
     </div>
 
+    <!-- Winners Feed for Public Roulette -->
+    <div id="winners" style="width: 100%; max-width: 600px; margin-top: 2rem;">
+        <h3 style="color: var(--primary-gold); text-align: center; margin-bottom: 1rem; font-size: 1rem;">🏆 RECENT WINNERS</h3>
+        <div id="winners-feed" class="winners-feed">
+            <p style="text-align: center; color: var(--text-muted); padding: 1rem; font-size: 0.8rem;">Ready for the next winner!</p>
+        </div>
+    </div>
+
     <div id="winner-panel" class="winner-panel">
         <div class="winner-card">
             <h2 style="font-size: 2rem; color: var(--primary-gold);">🎉 WE HAVE A WINNER!</h2>
@@ -76,8 +84,11 @@
         let names = ["Join the Contest!"];
         let isSpinning = false;
         let rotation = 0;
-        let spinSpeed = 0;
         let targetAngle = 0;
+        let spinStartTime = 0;
+        const SPIN_DURATION = 8000; // 8 seconds
+        let startRotation = 0;
+        let totalRotation = 0;
 
         init();
 
@@ -100,6 +111,7 @@
             }
 
             await fetchRegistrants();
+            await fetchRecentWinners();
             drawWheel();
             listenForSpins();
             animate();
@@ -198,52 +210,72 @@
                         startSpin(status.current_prize, status.winner_name);
                     }
                 })
-                .subscribe(s => console.log('Giveaway Control Status:', s));
+                .subscribe();
+
+            // 3. Listen for new winners
+            supabase
+                .channel('winners-feed')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'winners' }, payload => {
+                    console.log("New winner announced (Live):", payload.new.winner_name);
+                    renderWinnerItem(payload.new, true);
+                })
+                .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'winners' }, () => {
+                    fetchRecentWinners();
+                })
+                .subscribe();
         }
 
+        let lastActionTime = Date.now();
+
         function startSpin(prize, winnerName) {
-            isSpinning = true;
-            prizeDisplay.textContent = prize;
-            
-            // Set a high initial spin speed
-            spinSpeed = 0.5 + Math.random() * 0.2; 
-            
             fetchRegistrants().then(() => {
+                isSpinning = true;
+                spinStartTime = Date.now();
+                startRotation = rotation % (Math.PI * 2);
+                lastActionTime = Date.now();
+                prizeDisplay.textContent = prize;
+                
                 const winnerIndex = names.indexOf(winnerName);
                 if (winnerIndex !== -1) {
-                    // Calculate target angle to land winner at top (1.5 * PI)
                     const segmentSize = (Math.PI * 2) / names.length;
                     const winnerCenter = winnerIndex * segmentSize + (segmentSize / 2);
                     
-                    // The landing logic: 
-                    // We want: (FinalRotation + winnerCenter) % 2PI = 1.5PI (Top)
-                    // So: FinalRotation = 1.5PI - winnerCenter
                     targetAngle = (Math.PI * 1.5) - winnerCenter;
+                    while (targetAngle < 0) targetAngle += Math.PI * 2;
+                    targetAngle %= Math.PI * 2;
+
+                    const extraSpins = 5 + Math.floor(Math.random() * 5);
+                    let dist = targetAngle - startRotation;
+                    while (dist < 0) dist += Math.PI * 2;
+                    totalRotation = (extraSpins * Math.PI * 2) + dist;
                 }
             });
         }
 
         function animate() {
+            const now = Date.now();
+
             if (isSpinning) {
-                // Rotation adds spin speed
-                rotation += spinSpeed;
+                const elapsed = now - spinStartTime;
+                const progress = Math.min(elapsed / SPIN_DURATION, 1);
+                const easeOutCubic = 1 - Math.pow(1 - progress, 3);
                 
-                // Slow down simulation
-                if (spinSpeed > 0.01) {
-                    spinSpeed *= 0.985;
-                    // Sound tick
-                    if (Math.sin(rotation * names.length) > 0.8) {
-                        soundTick.currentTime = 0;
-                        soundTick.play();
-                    }
-                } else {
+                rotation = startRotation + (totalRotation * easeOutCubic);
+
+                const currentStep = Math.floor((rotation * names.length) / (Math.PI * 2));
+                if (currentStep !== animate.lastStep) {
+                    soundTick.currentTime = 0;
+                    soundTick.play().catch(() => {});
+                    animate.lastStep = currentStep;
+                }
+
+                if (progress >= 1) {
                     isSpinning = false;
-                    spinSpeed = 0;
                     finalizeWinner();
                 }
             } else {
-                // Idle slow rotation
-                rotation += 0.002;
+                const idleSpeed = (now - lastActionTime > 10000) ? 0.01 : 0.002;
+                rotation += idleSpeed;
             }
 
             drawWheel();
@@ -261,6 +293,42 @@
                 spread: 100,
                 origin: { y: 0.5 }
             });
+        }
+
+        async function fetchRecentWinners() {
+            const { data, error } = await supabase.from('winners').select('*').order('created_at', { ascending: false }).limit(5);
+            if (error) return;
+            const feed = document.getElementById('winners-feed');
+            if (!feed) return;
+            feed.innerHTML = '';
+            if (data.length === 0) {
+                feed.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem; font-size: 0.8rem;">Ready for the next winner!</p>';
+                return;
+            }
+            data.forEach(w => renderWinnerItem(w));
+        }
+
+        function renderWinnerItem(w, isNew = false) {
+            const feed = document.getElementById('winners-feed');
+            if (!feed) return;
+            const placeholder = feed.querySelector('p');
+            if (placeholder && placeholder.textContent.includes("Ready")) feed.innerHTML = '';
+
+            const item = document.createElement('div');
+            item.className = 'winner-item';
+            item.style.padding = '0.8rem';
+            const time = new Date(w.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            item.innerHTML = `
+                <div class="winner-info">
+                    <span class="winner-name-text" style="font-size: 0.9rem;">${w.winner_name}</span>
+                    <span class="winner-prize-text" style="font-size: 0.8rem;">${w.prize_won}</span>
+                </div>
+                <span class="winner-timestamp" style="font-size: 0.7rem;">${time}</span>
+            `;
+
+            if (isNew) feed.prepend(item);
+            else feed.appendChild(item);
         }
 
         window.closeWinner = () => {

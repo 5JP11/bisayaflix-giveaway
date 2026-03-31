@@ -98,22 +98,32 @@
                         </div>
                         <button type="submit" class="btn btn-red">Complete Registration & Enter</button>
                     </form>
+
+                    <div style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+                        <h3 style="display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem; margin-bottom: 1rem; color: var(--primary-gold);">
+                            Current Registrations
+                            <span class="live-badge">LIVE</span>
+                        </h3>
+                        <div class="roulette-container" id="roulette-list">
+                            <!-- Entries added dynamically -->
+                        </div>
+                        <div style="text-align: center;">
+                            <span id="entry-count" style="font-size: 1.5rem; font-weight: 800; color: var(--primary-gold);">0</span>
+                            <p style="font-size: 0.8rem; margin-bottom: 0;">Total Entries</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            <!-- Step 3: Success & Roulette -->
             <section id="step-3" class="step">
-                <div class="card">
+                <div class="card" style="text-align: center;">
                     <h1 style="color: var(--success-green); -webkit-text-fill-color: var(--success-green);">You're In!</h1>
-                    <p>Your name has been added to the live roulette. Stay tuned as we reach 1000+ entries!</p>
+                    <p style="font-size: 1.2rem; color: #fff; margin-bottom: 1.5rem;">Your name has been added to the live roulette.</p>
                     
-                    <div class="roulette-container" id="roulette-list">
-                        <!-- Entries added dynamically -->
-                    </div>
-
-                    <div style="text-align: center; margin-top: 1rem;">
-                        <span id="entry-count" style="font-size: 1.5rem; font-weight: 800; color: var(--primary-gold);">0</span>
-                        <p style="font-size: 0.8rem;">Current Registrations</p>
+                    <div class="proof-message" style="background: rgba(46, 204, 113, 0.1); border: 1px solid var(--success-green); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+                        <p style="color: #fff; margin-bottom: 0; font-weight: 600;">
+                            📸 Make sure to save a screenshot of this page as well proof of registration to show us when you won the prize.
+                        </p>
                     </div>
 
                     <button id="admin-trigger" style="opacity: 0.1; cursor: default; background: none; border: none; width: 100%; height: 20px;"></button>
@@ -132,6 +142,15 @@
 
                 <div id="roulette-status" style="margin-top: 1rem; font-weight: 700; color: var(--primary-gold);">
                     Waiting for next spin...
+                </div>
+            </section>
+
+            <!-- Recent Winners Section -->
+            <section id="winners" class="card" style="margin-top: 2rem;">
+                <h2 style="color: var(--primary-gold); text-align: center;">🏆 Recent Winners 🏆</h2>
+                <p style="text-align: center; font-size: 0.9rem;">Join these lucky winners and get your prizes!</p>
+                <div id="winners-feed" class="winners-feed">
+                    <p style="text-align: center; color: var(--text-muted); padding: 1rem;">No winners yet. Be the first!</p>
                 </div>
             </section>
         </main>

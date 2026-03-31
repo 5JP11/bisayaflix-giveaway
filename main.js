@@ -37,6 +37,13 @@ let isSpinning = false;
 let rotation = 0;
 let spinSpeed = 0;
 let targetAngle = 0;
+let spinStartTime = 0;
+const SPIN_DURATION = 8000; // 8 seconds
+let startRotation = 0;
+let totalRotation = 0;
+
+let idleTimer = null;
+let lastActionTime = Date.now();
 
 // Initialize
 init();
@@ -53,6 +60,7 @@ async function init() {
     generateQRCode();
     try {
         await fetchInitialEntries();
+        await fetchRecentWinners();
         subscribeToChanges();
         
         if (canvas) {
@@ -138,6 +146,18 @@ function subscribeToChanges() {
             if (status.is_spinning && !isSpinning) {
                 startSpin(status.current_prize, status.winner_name);
             }
+        })
+        .subscribe();
+
+    // 3. Listen for new winners
+    supabase
+        .channel('winners-feed')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'winners' }, payload => {
+            console.log("New winner announced:", payload.new.winner_name);
+            renderWinnerItem(payload.new, true);
+        })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'winners' }, () => {
+            fetchRecentWinners();
         })
         .subscribe();
 }
@@ -313,34 +333,77 @@ function drawWheel() {
 
 function startSpin(prize, winnerName) {
     if (isSpinning) return;
-    isSpinning = true;
-    if (rouletteStatus) rouletteStatus.textContent = `🎰 SPINNING FOR: ${prize}`;
-    spinSpeed = 0.5 + Math.random() * 0.1;
     
-    const winnerIndex = names.indexOf(winnerName);
-    if (winnerIndex !== -1) {
-        const step = (Math.PI * 2) / names.length;
-        const winnerCenter = winnerIndex * step + (step / 2);
-        targetAngle = (Math.PI * 1.5) - winnerCenter;
-    }
+    // Ensure names are fresh before calculation
+    fetchInitialEntries().then(() => {
+        isSpinning = true;
+        spinStartTime = Date.now();
+        startRotation = rotation % (Math.PI * 2);
+        lastActionTime = Date.now();
+        
+        if (rouletteStatus) rouletteStatus.textContent = `🎰 SPINNING FOR: ${prize}`;
+        
+        const winnerIndex = names.indexOf(winnerName);
+        if (winnerIndex !== -1) {
+            const step = (Math.PI * 2) / names.length;
+            
+            // Goal: land with pointer (1.5 * PI) at winnerCenter
+            // We want the winner's slice center to be exactly at 1.5 * PI (270 degrees)
+            // The position of the winner slice is winnerIndex * step
+            const winnerCenter = (winnerIndex * step) + (step / 2);
+            
+            // The rotation needed to bring winnerCenter to 1.5 * PI is:
+            targetAngle = (Math.PI * 1.5) - winnerCenter;
+            
+            // Normalize target
+            while (targetAngle < 0) targetAngle += Math.PI * 2;
+            targetAngle %= Math.PI * 2;
+
+            // Total rotation: current + some full spins + distance to target
+            // More spins (7-12) for higher velocity feel
+            const extraSpins = 7 + Math.floor(Math.random() * 5);
+            let dist = targetAngle - startRotation;
+            while (dist < 0) dist += Math.PI * 2;
+            
+            totalRotation = (extraSpins * Math.PI * 2) + dist;
+        }
+    });
 }
 
 function animate() {
+    const now = Date.now();
+    
     if (isSpinning) {
-        rotation += spinSpeed;
-        if (spinSpeed > 0.01) {
-            spinSpeed *= 0.985;
-            if (Math.sin(rotation * names.length) > 0.9) {
-                if (soundTick) { soundTick.currentTime = 0; soundTick.play(); }
+        const elapsed = now - spinStartTime;
+        const progress = Math.min(elapsed / SPIN_DURATION, 1);
+        
+        // Quintic out for much smoother, more "natural" glide to stop
+        const easeOutQuint = 1 - Math.pow(1 - progress, 5);
+        
+        rotation = startRotation + (totalRotation * easeOutQuint);
+
+        // Sound tick based on steps - adjust volume based on speed
+        const currentStep = Math.floor((rotation * names.length) / (Math.PI * 2));
+        if (currentStep !== animate.lastStep) {
+            if (soundTick) { 
+                soundTick.currentTime = 0; 
+                // Fade out sound as it slows down
+                soundTick.volume = Math.max(0.1, 1 - progress);
+                soundTick.play().catch(() => {}); 
             }
-        } else {
+            animate.lastStep = currentStep;
+        }
+
+        if (progress >= 1) {
             isSpinning = false;
-            spinSpeed = 0;
             finalizeWinner();
         }
     } else {
-        rotation += 0.002;
+        // Idle slow rotation
+        const idleSpeed = (now - lastActionTime > 10000) ? 0.01 : 0.002;
+        rotation += idleSpeed;
     }
+    
     drawWheel();
     requestAnimationFrame(animate);
 }
@@ -355,15 +418,75 @@ function finalizeWinner() {
     });
 }
 
+// Winner UI Helpers
+async function fetchRecentWinners() {
+    const { data, error } = await supabase
+        .from('winners')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+    if (error) {
+        console.error('Error fetching winners:', error);
+        return;
+    }
+
+    const winnersFeed = document.getElementById('winners-feed');
+    if (!winnersFeed) return;
+    
+    if (data.length === 0) {
+        winnersFeed.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">No winners yet. Be the first!</p>';
+        return;
+    }
+
+    winnersFeed.innerHTML = '';
+    data.forEach(w => renderWinnerItem(w));
+}
+
+function renderWinnerItem(w, isNew = false) {
+    const winnersFeed = document.getElementById('winners-feed');
+    if (!winnersFeed) return;
+
+    // Remove placeholder if exists
+    const placeholder = winnersFeed.querySelector('p');
+    if (placeholder && placeholder.textContent.includes("No winners yet")) {
+        winnersFeed.innerHTML = '';
+    }
+
+    const item = document.createElement('div');
+    item.className = 'winner-item';
+    const time = new Date(w.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    item.innerHTML = `
+        <div class="winner-info">
+            <span class="winner-name-text">${w.winner_name}</span>
+            <span class="winner-prize-text">Won: ${w.prize_won}</span>
+        </div>
+        <span class="winner-timestamp">${time}</span>
+    `;
+
+    if (isNew) {
+        winnersFeed.prepend(item);
+    } else {
+        winnersFeed.appendChild(item);
+    }
+}
+
 // UI Helpers
 function addEntryToRoulette(entry) {
     const item = document.createElement('div');
-    item.className = 'entry-item';
+    item.className = 'entry-item new-entry-flash';
     item.innerHTML = `
-        <span class="entry-name">${entry.full_name}</span>
-        <span class="entry-time">${new Date(entry.created_at).toLocaleTimeString()}</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 8px; height: 8px; background: var(--primary-gold); border-radius: 50%;"></div>
+            <span class="entry-name">${entry.full_name}</span>
+        </div>
+        <span class="entry-time">${new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
     `;
     rouletteList?.prepend(item);
+    
+    // Remove flash class after animation finishes
+    setTimeout(() => item.classList.remove('new-entry-flash'), 2000);
 }
 
 function renderEntries() {

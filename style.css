@@ -9,6 +9,7 @@
   --card-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
   --success-green: #2ecc71;
+  --glow-gold: 0 0 20px rgba(197, 160, 89, 0.2);
 }
 
 * {
@@ -29,12 +30,13 @@ body {
 }
 
 .container {
-  max-width: 600px;
+  max-width: 650px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 3rem 1rem;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  gap: 2rem;
 }
 
 /* Background gradient blobs */
@@ -55,13 +57,19 @@ body {
 /* Logo */
 .logo-container {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .logo-container img {
-  max-width: 200px;
+  max-width: 180px;
   height: auto;
   filter: drop-shadow(0 0 10px rgba(197, 160, 89, 0.3));
+  margin-bottom: -10px; /* Bring text closer */
+}
+
+.logo-container p {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
 }
 
 /* Steps */
@@ -82,6 +90,17 @@ body {
 @keyframes zoomIn {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes flash {
+  0% { background: rgba(197, 160, 89, 0.3); }
+  100% { background: transparent; }
 }
 
 /* Step 2 specifically as a Pop-up Modal */
@@ -113,12 +132,19 @@ body {
 /* Cards */
 .card {
   background: var(--card-bg);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  padding: 2rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  margin-bottom: 1.5rem;
+  border-radius: 24px;
+  padding: 3rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  margin-bottom: 2rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+  border-color: rgba(197, 160, 89, 0.3);
+  box-shadow: var(--glow-gold);
 }
 
 h1, h2 {
@@ -265,9 +291,15 @@ p {
 .entry-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.8rem;
+  align-items: center;
+  padding: 1rem;
   border-bottom: 1px solid var(--glass-border);
   animation: slideIn 0.3s ease;
+  transition: background 0.2s ease;
+}
+
+.entry-item:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 @keyframes slideIn {
@@ -285,6 +317,34 @@ p {
   color: var(--text-muted);
 }
 
+/* Live Badge */
+.live-badge {
+  background: var(--accent-red);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 1rem;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.live-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+}
+
+.new-entry-flash {
+  animation: flash 2s ease-out;
+}
+
 /* QR Code Section */
 #qrcode {
   margin: 1.5rem auto;
@@ -298,8 +358,8 @@ p {
 .instruction-steps {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-bottom: 1.5rem;
+  gap: 15px;
+  margin-bottom: 2rem;
   text-align: left;
 }
 
@@ -414,4 +474,56 @@ p {
   width: 100%;
   height: 100%;
   pointer-events: none;
+}
+
+.winners-feed {
+  margin-top: 2rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 15px;
+  border: 1px solid var(--glass-border);
+  padding: 1.5rem;
+}
+
+.winner-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  animation: slideIn 0.4s ease;
+}
+
+.winner-item:last-child {
+  border-bottom: none;
+}
+
+.winner-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.winner-name-text {
+  font-weight: 800;
+  color: var(--primary-gold);
+  font-size: 1.1rem;
+}
+
+.winner-prize-text {
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
+.winner-timestamp {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Responsive Grid for Winners on larger screens */
+@media (min-width: 768px) {
+  .winners-feed-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
 }

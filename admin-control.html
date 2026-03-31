@@ -55,8 +55,11 @@
                 <h2 style="color: var(--primary-gold); margin-bottom: 0;">🎉 RECENT WINNER!</h2>
                 <div id="winner-name-highlight" style="font-size: 2.5rem; font-weight: 900; color: white;">---</div>
             </div>
-            <p><strong>Recent Winners Log:</strong></p>
-            <ul id="winners-list" style="list-style: none; padding: 0; margin-top: 10px;"></ul>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <p style="margin: 0;"><strong>Recent Winners Log:</strong></p>
+                <button id="clear-winners-btn" class="btn btn-outline" style="width: auto; padding: 5px 12px; font-size: 0.7rem; border-color: rgba(255,255,255,0.2);">Clear Winners</button>
+            </div>
+            <ul id="winners-list" style="list-style: none; padding: 0; margin-top: 10px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 10px;"></ul>
             
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
                 <p style="font-size: 0.7rem; color: #666; margin-bottom: 10px;">DANGER ZONE: CLEARS SUPABASE DATABASE ENTIRELY</p>
@@ -100,8 +103,11 @@
         let names = ["Join the Contest!"];
         let isSpinning = false;
         let rotation = 0;
-        let spinSpeed = 0;
         let targetAngle = 0;
+        let spinStartTime = 0;
+        const SPIN_DURATION = 8000; // 8 seconds
+        let startRotation = 0;
+        let totalRotation = 0;
 
         init();
 
@@ -114,7 +120,6 @@
             }
             console.log("✅ Supabase Connected to:", supabaseUrl);
 
-            // Critical Diagnostic: Check if giveaway_state has ID=1
             const { data: checkState, error: stateError } = await supabase.from('giveaway_state').select('*').eq('id', 1).single();
             if (stateError) {
                 console.error("❌ GIVEAWAY_STATE ERROR: id=1 not found.", stateError.message);
@@ -125,9 +130,28 @@
             }
 
             await fetchRegistrants();
+            await fetchWinners();
             drawWheel();
             animate();
             listenForSpins();
+        }
+
+        async function fetchWinners() {
+            const { data, error } = await supabase.from('winners').select('*').order('created_at', { ascending: false });
+            if (error) {
+                console.warn('Winners table might not exist yet.');
+                return;
+            }
+            winnersList.innerHTML = '';
+            data.forEach(displayWinner);
+        }
+
+        function displayWinner(w) {
+            const li = document.createElement('li');
+            li.style.cssText = "padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff; font-size: 0.85rem;";
+            const time = new Date(w.created_at).toLocaleTimeString();
+            li.innerHTML = `<span style="color:#666; font-size: 0.7rem;">[${time}]</span> <strong style="color:var(--primary-gold);">${w.winner_name}</strong> won a <strong>${w.prize_won}</strong>`;
+            winnersList.appendChild(li);
         }
 
         async function initializeSystem() {
@@ -142,7 +166,6 @@
             if (error) {
                 alert("Error fixing database: " + error.message);
                 btn.disabled = false;
-                btn.textContent = "FIX DATABASE NOW";
             } else {
                 alert("✅ Database fixed! Refreshing page...");
                 location.reload();
@@ -191,69 +214,94 @@
             ctx.stroke();
         }
 
+        let lastActionTime = Date.now();
+
         function animate() {
+            const now = Date.now();
             if (isSpinning) {
-                rotation += spinSpeed;
-                if (spinSpeed > 0.01) {
-                    spinSpeed *= 0.985;
-                    if (Math.sin(rotation * names.length) > 0.9) {
+                const elapsed = now - spinStartTime;
+                const progress = Math.min(elapsed / SPIN_DURATION, 1);
+                
+                // quintic out for much smoother, more physical deceleration
+                const easeOutQuint = 1 - Math.pow(1 - progress, 5);
+                
+                rotation = startRotation + (totalRotation * easeOutQuint);
+
+                const currentStep = Math.floor((rotation * names.length) / (Math.PI * 2));
+                if (currentStep !== animate.lastStep) {
+                    if (soundTick) {
                         soundTick.currentTime = 0;
-                        soundTick.play();
+                        // Fade out sound volume as it slows down
+                        soundTick.volume = Math.max(0.1, 1 - progress);
+                        soundTick.play().catch(() => {});
                     }
-                } else {
+                    animate.lastStep = currentStep;
+                }
+
+                if (progress >= 1) {
                     isSpinning = false;
-                    spinSpeed = 0;
-                    soundWin.play();
+                    if (soundWin) soundWin.play();
                 }
             } else {
-                rotation += 0.002;
+                const idleSpeed = (now - lastActionTime > 10000) ? 0.01 : 0.002;
+                rotation += idleSpeed;
             }
             drawWheel();
             requestAnimationFrame(animate);
         }
 
         function listenForSpins() {
-            // 1. Listen for new entries to add to Admin wheel
             supabase.channel('registrations-feed').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
                 console.log("New registration received (Admin):", payload.new.full_name);
                 if (names[0] === "Join the Contest!") names = [];
                 names.unshift(payload.new.full_name);
                 drawWheel();
-            }).on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'registrations' }, payload => {
-                console.log("Registration deleted (Admin):", payload.old.id);
-                // For Wipe All, we just re-fetch everything or clear names
+            }).on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'registrations' }, () => {
                 fetchRegistrants().then(() => drawWheel());
             }).on('postgres_changes', { event: '*', schema: 'public', table: 'registrations' }, payload => {
                 if (payload.eventType === 'DELETE' || payload.eventType === 'TRUNCATE') {
-                    console.log("Full Wipe/Truncate detected!");
                     names = ["Join the Contest!"];
                     winnersList.innerHTML = '';
                     drawWheel();
                 }
-            }).subscribe(status => console.log('Registrations Sync Status:', status));
+            }).subscribe();
 
-            // 2. Listen for spin status updates and update the Winners log
             supabase.channel('giveaway-control').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
                 const status = payload.new;
-                console.log("State Update received:", status);
                 
                 if (status.is_spinning && !isSpinning) {
-                    isSpinning = true;
-                    spinSpeed = 0.5 + Math.random() * 0.1;
-                    rouletteStatus.textContent = `🎰 SPINNING FOR: ${status.current_prize}`;
-                    fetchRegistrants();
+                    startSpinUI(status.winner_name, status.current_prize);
                 } else if (!status.is_spinning && isSpinning) {
                     winnerHighlight.textContent = status.winner_name;
                     announcement.style.display = 'block';
                     rouletteStatus.textContent = "Spin Complete!";
-                    
-                    // Add winner to the Winners log
-                    const li = document.createElement('li');
-                    li.style.cssText = "padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff;";
-                    li.innerHTML = `<strong style="color:var(--primary-gold);">${status.winner_name}</strong> won a <strong>${status.current_prize}</strong>`;
-                    winnersList.prepend(li);
+                    fetchWinners();
                 }
-            }).subscribe(status => console.log('Giveaway Control Status:', status));
+            }).subscribe();
+        }
+
+        function startSpinUI(winnerName, prize) {
+            isSpinning = true;
+            spinStartTime = Date.now();
+            startRotation = rotation % (Math.PI * 2);
+            rouletteStatus.textContent = `🎰 SPINNING FOR: ${prize}`;
+            
+            const winnerIndex = names.indexOf(winnerName);
+            if (winnerIndex !== -1) {
+                const step = (Math.PI * 2) / names.length;
+                
+                // Centering winner slice under pointer (1.5 * PI)
+                const winnerCenter = (winnerIndex * step) + (step / 2);
+                targetAngle = (Math.PI * 1.5) - winnerCenter;
+                
+                while (targetAngle < 0) targetAngle += Math.PI * 2;
+                targetAngle %= Math.PI * 2;
+
+                const extraSpins = 7 + Math.floor(Math.random() * 5);
+                let dist = targetAngle - startRotation;
+                while (dist < 0) dist += Math.PI * 2;
+                totalRotation = (extraSpins * Math.PI * 2) + dist;
+            }
         }
 
         spinBtn.addEventListener('click', async () => {
@@ -261,13 +309,19 @@
             spinBtn.disabled = true;
             spinBtn.textContent = "⚡ TRIGGERING LIVE SPIN...";
 
-            // 1. Pick winner
-            const { data: registrants, error } = await supabase.from('registrations').select('full_name').order('created_at', { ascending: false });
-            if (error) return alert("Error picking winner: " + error.message);
-            if (!registrants.length) return alert("No entrants!");
+            const { data: registrants, error } = await supabase.from('registrations').select('full_name');
+            if (error || !registrants.length) {
+                spinBtn.disabled = false;
+                spinBtn.textContent = "🎯 TRIGGER LIVE SPIN";
+                return alert("No entrants!");
+            }
+            
             const winner = registrants[Math.floor(Math.random() * registrants.length)];
 
-            // 2. Transmit
+            // Save winner to persistent log
+            await supabase.from('winners').insert([{ winner_name: winner.full_name, prize_won: prize }]);
+
+            // Transmit to Public view
             await supabase.from('giveaway_state').update({ 
                 is_spinning: true, 
                 current_prize: prize,
@@ -279,7 +333,26 @@
                 spinBtn.disabled = false;
                 spinBtn.textContent = "🎯 TRIGGER LIVE SPIN";
                 await supabase.from('giveaway_state').update({ is_spinning: false }).eq('id', 1);
-            }, 8000); 
+            }, SPIN_DURATION); 
+        });
+
+        // Clear Winners Log
+        document.getElementById('clear-winners-btn').addEventListener('click', async () => {
+            if (!confirm("Clear all winners from the database?")) return;
+            const btn = document.getElementById('clear-winners-btn');
+            btn.textContent = "Clearing...";
+            btn.disabled = true;
+            
+            const { error } = await supabase.from('winners').delete().not('id', 'is', null);
+            
+            if (error) {
+                alert("Error clearing winners: " + error.message);
+            } else {
+                fetchWinners();
+                alert("✅ Winners list cleared.");
+            }
+            btn.textContent = "Clear Winners";
+            btn.disabled = false;
         });
 
         // Wipe Data Logic
