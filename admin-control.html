@@ -164,6 +164,14 @@
         }
 
         function listenForSpins() {
+            // 1. Listen for new entries to add to Admin wheel
+            supabase.channel('admin-sync').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
+                console.log("New registration received (Admin):", payload.new.full_name);
+                names.unshift(payload.new.full_name);
+                drawWheel();
+            }).subscribe();
+
+            // 2. Listen for spin status updates
             supabase.channel('roulette-room').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
                 const status = payload.new;
                 if (status.is_spinning && !isSpinning) {
@@ -172,7 +180,6 @@
                     rouletteStatus.textContent = `🎰 SPINNING FOR: ${status.current_prize}`;
                     fetchRegistrants();
                 } else if (!status.is_spinning && isSpinning) {
-                    // Sync winner display
                     winnerHighlight.textContent = status.winner_name;
                     announcement.style.display = 'block';
                     rouletteStatus.textContent = "Spin Complete!";

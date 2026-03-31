@@ -124,8 +124,19 @@
         }
 
         function listenForSpins() {
+            // 1. Listen for new registrations to keep names in sync
             supabase
-                .channel('roulette-room')
+                .channel('roulette-data')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
+                    console.log("New registration received:", payload.new.full_name);
+                    names.unshift(payload.new.full_name);
+                    drawWheel();
+                })
+                .subscribe();
+
+            // 2. Listen for Admin "Spin" triggers
+            supabase
+                .channel('roulette-control')
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'giveaway_state' }, payload => {
                     const status = payload.new;
                     if (status.is_spinning && !isSpinning) {

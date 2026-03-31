@@ -177,12 +177,19 @@ registrationForm.addEventListener('submit', async (e) => {
         // 2. Sync to Google Sheets
         const sheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_URL;
         if (sheetsUrl) {
+            console.log("Syncing to Google Sheets via text/plain to avoid CORS...");
             fetch(sheetsUrl, {
                 method: 'POST',
                 mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ full_name: name, email: email, phone: phone })
-            }).catch(e => console.error("Sheets Sync Error:", e));
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ 
+                    full_name: name, 
+                    email: email, 
+                    phone: phone,
+                    timestamp: new Date().toISOString()
+                })
+            }).then(() => console.log("Sheets Sync Success (no-cors window)."))
+              .catch(e => console.error("Sheets Sync Error:", e));
         }
 
         showStep(3);
