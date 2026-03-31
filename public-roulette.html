@@ -73,6 +73,23 @@
         init();
 
         async function init() {
+            console.log("🚀 Initializing Live Roulette...");
+            if (!supabaseUrl || !supabaseAnonKey) {
+                console.error("❌ CRITICAL: Supabase config missing! Check your Vercel Environment Variables or local .env file.");
+                alert("Roulette System is not connected. Please check configuration.");
+                return;
+            }
+            console.log("✅ Supabase Connected to:", supabaseUrl);
+            
+            // Critical Diagnostic: Check if giveaway_state has ID=1
+            const { data: checkState, error: stateError } = await supabase.from('giveaway_state').select('*').eq('id', 1).single();
+            if (stateError) {
+                console.error("❌ GIVEAWAY_STATE ERROR: id=1 not found. This will prevent the wheel from spinning.", stateError.message);
+                alert("Database state issue detected! ID=1 record is missing from giveaway_state.");
+            } else {
+                console.log("✅ Giveaway System Status:", checkState.is_spinning ? "SPINNING" : "READY");
+            }
+
             await fetchRegistrants();
             drawWheel();
             listenForSpins();

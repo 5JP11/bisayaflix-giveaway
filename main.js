@@ -42,11 +42,13 @@ let targetAngle = 0;
 init();
 
 async function init() {
-    console.log("Initializing BisayaFlix Giveaway...");
+    console.log("🚀 Initializing BisayaFlix Giveaway...");
     if (!supabaseUrl || !supabaseAnonKey) {
-        console.error("Supabase config missing! Check Environment Variables.");
+        console.error("❌ CRITICAL: Supabase config missing! Check your Vercel Environment Variables or local .env file.");
+        alert("Giveaway System is not connected. Please check configuration.");
         return;
     }
+    console.log("✅ Supabase Connected to:", supabaseUrl);
     
     generateQRCode();
     try {
@@ -58,7 +60,7 @@ async function init() {
             animate();
         }
     } catch (e) {
-        console.error("Initialization failed:", e);
+        console.error("❌ Initialization failed:", e);
     }
 }
 
