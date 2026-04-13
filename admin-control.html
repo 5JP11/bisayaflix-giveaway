@@ -36,6 +36,11 @@
         .participants-management-section { margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); }
         .registrant-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px; }
         .winner-item-admin { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+        /* Proof Modal */
+        #proof-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .proof-container { background: var(--bg-dark); padding: 20px; border-radius: 20px; border: 1px solid var(--primary-gold); max-width: 90%; max-height: 90%; text-align: center; }
+        .proof-image { max-width: 100%; max-height: 70vh; border-radius: 10px; object-fit: contain; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -95,11 +100,19 @@
         <!-- NEW: Manage Participants Section -->
         <div class="participants-management-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--primary-gold); font-size: 1rem;">👥 MANAGE PARTICIPANTS</h3>
+                <h3 style="margin: 0; color: var(--primary-gold); font-size: 1rem;">👥 MANAGE PARTICIPANTS (<span id="admin-participant-count">0</span>)</h3>
                 <button id="refresh-registrants-btn" class="btn-small btn-outline" style="width: auto; padding: 4px 10px; font-size: 0.7rem;">Refresh</button>
             </div>
             <div id="registrants-list" style="max-height: 250px; overflow-y: auto;">
                 <p style="text-align: center; color: #666; font-size: 0.8rem;">Loading participants...</p>
+            </div>
+        </div>
+        
+        <div id="proof-modal">
+            <div class="proof-container">
+                <h2 id="proof-title" style="color: var(--primary-gold); font-size: 1.2rem; margin-bottom: 15px;">Proof of Download</h2>
+                <img id="proof-img" class="proof-image" src="" alt="Proof Screenshot">
+                <button onclick="document.getElementById('proof-modal').style.display='none'" class="btn btn-primary" style="width: auto; padding: 10px 30px;">Close Preview</button>
             </div>
         </div>
         
@@ -150,9 +163,13 @@
         loginBtn.addEventListener('click', () => {
             if (loginInput.value === 'bisaya123') {
                 sessionStorage.setItem('admin_auth', 'true');
-                loginOverlay.style.fadeOut = "0.3s";
-                setTimeout(() => loginOverlay.style.display = 'none', 300);
-                init();
+                loginOverlay.style.transition = "opacity 0.4s ease, visibility 0.4s";
+                loginOverlay.style.opacity = "0";
+                loginOverlay.style.visibility = "hidden";
+                setTimeout(() => {
+                    loginOverlay.style.display = 'none';
+                    init();
+                }, 400);
             } else {
                 alert("Incorrect passkey.");
             }
@@ -401,6 +418,8 @@
             if (!registrantsList) return;
             registrantsList.innerHTML = '';
             
+            document.getElementById('admin-participant-count').textContent = data.length;
+
             if (data.length === 0) {
                 registrantsList.innerHTML = '<p style="text-align: center; color: #666; font-size: 0.8rem; padding: 20px;">No participants yet.</p>';
                 return;
@@ -411,11 +430,31 @@
                 div.className = 'registrant-item';
                 div.innerHTML = `
                     <span style="font-size: 0.9rem; font-weight: 600;">${r.full_name}</span>
-                    <button class="btn-small btn-delete" style="padding: 4px 8px; font-size: 0.65rem;">Disqualify</button>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn-small btn-outline view-proof-btn" style="padding: 4px 8px; font-size: 0.65rem; border-color: rgba(255,255,255,0.2);">View Proof</button>
+                        <button class="btn-small btn-delete disqualify-btn" style="padding: 4px 8px; font-size: 0.65rem;">Disqualify</button>
+                    </div>
                 `;
-                div.querySelector('.btn-delete').onclick = () => deleteRegistrant(r.id, r.full_name);
+                
+                div.querySelector('.view-proof-btn').onclick = () => showProof(r.full_name, r.screenshot_url);
+                div.querySelector('.disqualify-btn').onclick = () => deleteRegistrant(r.id, r.full_name);
                 registrantsList.appendChild(div);
             });
+        }
+
+        function showProof(name, url) {
+            const modal = document.getElementById('proof-modal');
+            const img = document.getElementById('proof-img');
+            const title = document.getElementById('proof-title');
+            
+            if (!url) {
+                alert("No screenshot proof uploaded for this user.");
+                return;
+            }
+
+            title.textContent = `Proof: ${name}`;
+            img.src = url;
+            modal.style.display = 'flex';
         }
 
         async function deleteRegistrant(id, name) {
@@ -451,7 +490,8 @@
                 ctx.strokeStyle = '#333';
                 ctx.stroke();
 
-                if (names.length < 60) {
+                // Improved Name Rendering (Dynamic Scale + Multi-line)
+                if (names.length < 300) {
                     ctx.save();
                     ctx.translate(centerX, centerY);
                     ctx.rotate(startAngle + step / 2);
@@ -462,10 +502,45 @@
                     ctx.shadowColor = 'rgba(0,0,0,0.3)';
                     ctx.shadowBlur = 2;
                     
-                    ctx.font = `800 ${Math.max(12, 24 - names.length/5)}px Inter`;
-                    ctx.fillText(name.toUpperCase().substring(0, 12), radius - 30, 0);
+                    // 1. Initial Font Size Calculation
+                    let fontSize = Math.max(9, 24 - names.length/4);
+                    
+                    // 2. Prep Text (Split if long and has space)
+                    const cleanName = name.toUpperCase().trim();
+                    const words = cleanName.split(' ');
+                    let lines = [cleanName];
+                    
+                    if (cleanName.length > 14 && words.length > 1) {
+                        const mid = Math.ceil(words.length / 2);
+                        lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+                    }
+
+                    // 3. Final Shrink-to-Fit Check
+                    ctx.font = `800 ${fontSize}px Inter`;
+                    let maxWidth = radius - 50; 
+                    let currentMaxWidth = 0;
+                    lines.forEach(l => {
+                        const w = ctx.measureText(l).width;
+                        if (w > currentMaxWidth) currentMaxWidth = w;
+                    });
+
+                    if (currentMaxWidth > maxWidth) {
+                        fontSize *= (maxWidth / currentMaxWidth);
+                        ctx.font = `800 ${fontSize}px Inter`;
+                    }
+
+                    // 4. Draw!
+                    if (lines.length > 1) {
+                        const spacing = fontSize * 0.6;
+                        ctx.fillText(lines[1], radius - 30, spacing);
+                        ctx.fillText(lines[0], radius - 30, -spacing);
+                    } else {
+                        ctx.fillText(lines[0], radius - 30, 0);
+                    }
+                    
                     ctx.restore();
                 }
+
             });
 
             // Draw Smooth Outer Ring

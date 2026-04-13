@@ -183,8 +183,8 @@
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
-                // Draw Name (smoother and auto-adjusting)
-                if (names.length < 60) {
+                // Improved Name Rendering (Dynamic Scale + Multi-line)
+                if (names.length < 300) {
                     ctx.save();
                     ctx.translate(centerX, centerY);
                     ctx.rotate(startAngle + step / 2);
@@ -195,10 +195,45 @@
                     ctx.shadowColor = 'rgba(0,0,0,0.3)';
                     ctx.shadowBlur = 2;
                     
-                    ctx.font = `800 ${Math.max(12, 24 - names.length/5)}px Inter`;
-                    ctx.fillText(name.toUpperCase().substring(0, 12), radius - 30, 0);
+                    // 1. Initial Font Size Calculation
+                    let fontSize = Math.max(9, 24 - names.length/4);
+                    
+                    // 2. Prep Text (Split if long and has space)
+                    const cleanName = name.toUpperCase().trim();
+                    const words = cleanName.split(' ');
+                    let lines = [cleanName];
+                    
+                    if (cleanName.length > 14 && words.length > 1) {
+                        const mid = Math.ceil(words.length / 2);
+                        lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+                    }
+
+                    // 3. Final Shrink-to-Fit Check
+                    ctx.font = `800 ${fontSize}px Inter`;
+                    let maxWidth = radius - 50; 
+                    let currentMaxWidth = 0;
+                    lines.forEach(l => {
+                        const w = ctx.measureText(l).width;
+                        if (w > currentMaxWidth) currentMaxWidth = w;
+                    });
+
+                    if (currentMaxWidth > maxWidth) {
+                        fontSize *= (maxWidth / currentMaxWidth);
+                        ctx.font = `800 ${fontSize}px Inter`;
+                    }
+
+                    // 4. Draw!
+                    if (lines.length > 1) {
+                        const spacing = fontSize * 0.6;
+                        ctx.fillText(lines[1], radius - 30, spacing);
+                        ctx.fillText(lines[0], radius - 30, -spacing);
+                    } else {
+                        ctx.fillText(lines[0], radius - 30, 0);
+                    }
+                    
                     ctx.restore();
                 }
+
             });
 
             // Draw Smooth Outer Ring
