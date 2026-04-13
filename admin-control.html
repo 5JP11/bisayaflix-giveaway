@@ -20,6 +20,17 @@
         
         /* Error Banner */
         #error-banner { display: none; background: rgba(229, 9, 20, 0.2); border: 1px solid var(--accent-red); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; text-align: center; }
+
+        /* Prize Management Styles */
+        .prizes-management-section { margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .prize-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); }
+        .prize-name { font-weight: 500; font-size: 0.9rem; }
+        .add-prize-box { display: flex; gap: 10px; margin-top: 15px; }
+        .add-prize-input { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; color: white; }
+        .btn-small { padding: 8px 15px; font-size: 0.8rem; border-radius: 8px; cursor: pointer; border: none; transition: 0.2s; }
+        .btn-delete { background: rgba(229, 9, 20, 0.2); color: #ff4d4d; border: 1px solid rgba(229, 9, 20, 0.3); }
+        .btn-delete:hover { background: rgba(229, 9, 20, 0.4); }
+        .btn-add { background: var(--primary-gold); color: black; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -58,13 +69,22 @@
             <h1>🎡 Giveaway Control</h1>
             <label style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-bottom: 5px;">SELECT PRIZE TO GIVE AWAY</label>
             <select id="prize-selector">
-                <option value="BisayaFlix Varsity Jacket">BisayaFlix Varsity Jacket</option>
-                <option value="BisayaFlix Tshirt">BisayaFlix Tshirt</option>
-                <option value="Totebags">Totebags</option>
-                <option value="BisayaFlix Pocketfans">BisayaFlix Pocketfans</option>
-                <option value="BisayaFlix Sticker">BisayaFlix Sticker</option>
+                <!-- Dynamically populated -->
             </select>
             <button id="spin-btn" class="spin-btn">🎯 TRIGGER LIVE SPIN</button>
+        </div>
+
+        <!-- NEW: Prize Management Section -->
+        <div class="prizes-management-section">
+            <h3 style="margin-top: 0; color: var(--primary-gold); font-size: 1rem;">🎁 MANAGE PRIZES</h3>
+            <div id="prizes-list" style="margin-bottom: 10px;">
+                <!-- Prizes will be loaded here -->
+                <p style="text-align: center; color: #666; font-size: 0.8rem;">Loading prizes...</p>
+            </div>
+            <div class="add-prize-box">
+                <input type="text" id="new-prize-name" class="add-prize-input" placeholder="New Prize Name...">
+                <button id="add-prize-btn" class="btn-small btn-add">ADD PRIZE</button>
+            </div>
         </div>
         
         <!-- 3. Winners & Announcement at the Bottom -->
@@ -143,6 +163,9 @@
         const spinBtn = document.getElementById('spin-btn');
         const prizeSelector = document.getElementById('prize-selector');
         const winnersList = document.getElementById('winners-list');
+        const prizesList = document.getElementById('prizes-list');
+        const newPrizeInput = document.getElementById('new-prize-name');
+        const addPrizeBtn = document.getElementById('add-prize-btn');
         const winnerHighlight = document.getElementById('winner-name-highlight');
         const announcement = document.getElementById('latest-winner-announcement');
 
@@ -184,10 +207,84 @@
 
             await fetchRegistrants();
             await fetchWinners();
+            await fetchPrizes();
             setupCanvas(canvas);
             drawWheel();
             animate();
             listenForSpins();
+            listenForPrizes(); // Realtime for prizes
+        }
+
+        async function fetchPrizes() {
+            const { data, error } = await supabase.from('prizes').select('*').order('name', { ascending: true });
+            if (error) {
+                console.error('Error fetching prizes:', error);
+                return;
+            }
+            renderPrizes(data);
+        }
+
+        function renderPrizes(data) {
+            // Update the selector
+            prizeSelector.innerHTML = data.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            if (data.length === 0) {
+                prizeSelector.innerHTML = '<option value="">No prizes available</option>';
+            }
+
+            // Update the management list
+            prizesList.innerHTML = '';
+            if (data.length === 0) {
+                prizesList.innerHTML = '<p style="text-align: center; color: #666; font-size: 0.8rem;">No prizes added yet.</p>';
+            } else {
+                data.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'prize-item';
+                    div.innerHTML = `
+                        <span class="prize-name">${p.name}</span>
+                        <button class="btn-small btn-delete" data-id="${p.id}">Delete</button>
+                    `;
+                    div.querySelector('.btn-delete').onclick = () => deletePrize(p.id, p.name);
+                    prizesList.appendChild(div);
+                });
+            }
+        }
+
+        async function addPrize() {
+            const name = newPrizeInput.value.trim();
+            if (!name) return;
+            
+            addPrizeBtn.disabled = true;
+            addPrizeBtn.textContent = "ADDING...";
+
+            const { error } = await supabase.from('prizes').insert([{ name }]);
+            
+            if (error) {
+                alert("Error adding prize: " + error.message);
+            } else {
+                newPrizeInput.value = '';
+            }
+            addPrizeBtn.disabled = false;
+            addPrizeBtn.textContent = "ADD PRIZE";
+        }
+
+        async function deletePrize(id, name) {
+            if (!confirm(`Delete prize "${name}"?`)) return;
+            
+            const { error } = await supabase.from('prizes').delete().eq('id', id);
+            if (error) {
+                alert("Error deleting prize: " + error.message);
+            }
+        }
+
+        addPrizeBtn.addEventListener('click', addPrize);
+        newPrizeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addPrize();
+        });
+
+        function listenForPrizes() {
+            supabase.channel('prizes-feed').on('postgres_changes', { event: '*', schema: 'public', table: 'prizes' }, () => {
+                fetchPrizes();
+            }).subscribe();
         }
 
         function setupCanvas(canvas) {
@@ -381,6 +478,8 @@
 
         spinBtn.addEventListener('click', async () => {
             const prize = prizeSelector.value;
+            if (!prize) return alert("Please select a prize first!");
+            
             spinBtn.disabled = true;
             spinBtn.textContent = "⚡ TRIGGERING LIVE SPIN...";
 
