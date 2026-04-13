@@ -51,3 +51,9 @@ INSERT INTO prizes (name) VALUES
 ('BisayaFlix Pocketfans'),
 ('BisayaFlix Sticker')
 ON CONFLICT (name) DO NOTHING;
+
+-- Disable RLS for all tables to allow public/admin access via Anon Key
+ALTER TABLE registrations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE winners DISABLE ROW LEVEL SECURITY;
+ALTER TABLE giveaway_state DISABLE ROW LEVEL SECURITY;
+ALTER TABLE prizes DISABLE ROW LEVEL SECURITY;
