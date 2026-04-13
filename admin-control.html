@@ -31,6 +31,11 @@
         .btn-delete { background: rgba(229, 9, 20, 0.2); color: #ff4d4d; border: 1px solid rgba(229, 9, 20, 0.3); }
         .btn-delete:hover { background: rgba(229, 9, 20, 0.4); }
         .btn-add { background: var(--primary-gold); color: black; font-weight: 700; }
+
+        /* Manage Participants Styles */
+        .participants-management-section { margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .registrant-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 8px; }
+        .winner-item-admin { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -84,6 +89,17 @@
             <div class="add-prize-box">
                 <input type="text" id="new-prize-name" class="add-prize-input" placeholder="New Prize Name...">
                 <button id="add-prize-btn" class="btn-small btn-add">ADD PRIZE</button>
+            </div>
+        </div>
+
+        <!-- NEW: Manage Participants Section -->
+        <div class="participants-management-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: var(--primary-gold); font-size: 1rem;">👥 MANAGE PARTICIPANTS</h3>
+                <button id="refresh-registrants-btn" class="btn-small btn-outline" style="width: auto; padding: 4px 10px; font-size: 0.7rem;">Refresh</button>
+            </div>
+            <div id="registrants-list" style="max-height: 250px; overflow-y: auto;">
+                <p style="text-align: center; color: #666; font-size: 0.8rem;">Loading participants...</p>
             </div>
         </div>
         
@@ -166,6 +182,8 @@
         const prizesList = document.getElementById('prizes-list');
         const newPrizeInput = document.getElementById('new-prize-name');
         const addPrizeBtn = document.getElementById('add-prize-btn');
+        const registrantsList = document.getElementById('registrants-list');
+        const refreshRegistrantsBtn = document.getElementById('refresh-registrants-btn');
         const winnerHighlight = document.getElementById('winner-name-highlight');
         const announcement = document.getElementById('latest-winner-announcement');
 
@@ -212,7 +230,9 @@
             drawWheel();
             animate();
             listenForSpins();
-            listenForPrizes(); // Realtime for prizes
+            listenForPrizes(); 
+            
+            refreshRegistrantsBtn.addEventListener('click', fetchRegistrants);
         }
 
         async function fetchPrizes() {
@@ -259,9 +279,15 @@
             const { error } = await supabase.from('prizes').insert([{ name }]);
             
             if (error) {
-                alert("Error adding prize: " + error.message);
+                console.error("Add Prize Error:", error);
+                if (error.code === '23505') {
+                    alert("❌ Error: A prize with this name already exists.");
+                } else {
+                    alert("❌ Error adding prize: " + error.message);
+                }
             } else {
                 newPrizeInput.value = '';
+                fetchPrizes(); // Manual fallback
             }
             addPrizeBtn.disabled = false;
             addPrizeBtn.textContent = "ADD PRIZE";
@@ -304,15 +330,36 @@
                 return;
             }
             winnersList.innerHTML = '';
-            data.forEach(displayWinner);
+            if (data.length === 0) {
+                winnersList.innerHTML = '<li style="text-align: center; color: #666; padding: 20px;">No winners logged yet.</li>';
+            } else {
+                data.forEach(displayWinner);
+            }
         }
 
         function displayWinner(w) {
             const li = document.createElement('li');
-            li.style.cssText = "padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #fff; font-size: 0.85rem;";
+            li.className = 'winner-item-admin';
             const time = new Date(w.created_at).toLocaleTimeString();
-            li.innerHTML = `<span style="color:#666; font-size: 0.7rem;">[${time}]</span> <strong style="color:var(--primary-gold);">${w.winner_name}</strong> won a <strong>${w.prize_won}</strong>`;
+            li.innerHTML = `
+                <div>
+                    <span style="color:#666; font-size: 0.7rem;">[${time}]</span> 
+                    <strong style="color:var(--primary-gold);">${w.winner_name}</strong> won a <strong>${w.prize_won}</strong>
+                </div>
+                <button class="btn-small btn-delete" style="padding: 4px 8px; font-size: 0.65rem;">Remove</button>
+            `;
+            li.querySelector('.btn-delete').onclick = () => deleteWinner(w.id, w.winner_name);
             winnersList.appendChild(li);
+        }
+
+        async function deleteWinner(id, name) {
+            if (!confirm(`Permanently remove winner log for "${name}"?`)) return;
+            const { error } = await supabase.from('winners').delete().eq('id', id);
+            if (error) {
+                alert("Error removing winner: " + error.message);
+            } else {
+                fetchWinners();
+            }
         }
 
         async function initializeSystem() {
@@ -334,9 +381,52 @@
         }
 
         async function fetchRegistrants() {
-            const { data, error } = await supabase.from('registrations').select('full_name').order('created_at', { ascending: false });
-            if (error) console.error('Fetch Registrants Error (Admin):', error);
-            if (data && data.length > 0) names = data.map(r => r.full_name);
+            if (refreshRegistrantsBtn) refreshRegistrantsBtn.textContent = "...";
+            const { data, error } = await supabase.from('registrations').select('*').order('created_at', { ascending: false });
+            if (refreshRegistrantsBtn) refreshRegistrantsBtn.textContent = "Refresh";
+            
+            if (error) {
+                console.error('Fetch Registrants Error (Admin):', error);
+                return;
+            }
+            
+            if (data) {
+                names = data.length > 0 ? data.map(r => r.full_name) : ["Join the Contest!"];
+                renderRegistrants(data);
+                drawWheel();
+            }
+        }
+
+        function renderRegistrants(data) {
+            if (!registrantsList) return;
+            registrantsList.innerHTML = '';
+            
+            if (data.length === 0) {
+                registrantsList.innerHTML = '<p style="text-align: center; color: #666; font-size: 0.8rem; padding: 20px;">No participants yet.</p>';
+                return;
+            }
+
+            data.forEach(r => {
+                const div = document.createElement('div');
+                div.className = 'registrant-item';
+                div.innerHTML = `
+                    <span style="font-size: 0.9rem; font-weight: 600;">${r.full_name}</span>
+                    <button class="btn-small btn-delete" style="padding: 4px 8px; font-size: 0.65rem;">Disqualify</button>
+                `;
+                div.querySelector('.btn-delete').onclick = () => deleteRegistrant(r.id, r.full_name);
+                registrantsList.appendChild(div);
+            });
+        }
+
+        async function deleteRegistrant(id, name) {
+            if (!confirm(`Disqualify and remove "${name}" from the wheel?`)) return;
+            
+            const { error } = await supabase.from('registrations').delete().eq('id', id);
+            if (error) {
+                alert("Error removing participant: " + error.message);
+            } else {
+                fetchRegistrants();
+            }
         }
 
         function drawWheel() {
