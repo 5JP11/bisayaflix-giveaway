@@ -316,6 +316,8 @@
             const { error } = await supabase.from('prizes').delete().eq('id', id);
             if (error) {
                 alert("Error deleting prize: " + error.message);
+            } else {
+                fetchPrizes(); // Manual fallback refresh
             }
         }
 
