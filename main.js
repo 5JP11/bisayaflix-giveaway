@@ -10,14 +10,14 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Easy Configuration: Change Slider Photos Here
 const SLIDER_CONFIG = {
     images: [
-        '/cookies.png',
-        '/jayrsiaboc.png',
-        '/midnasty.png',
-        '/mistalefty.png',
-        '/winstonlee.png',
+        '/1.png',
+        '/2.png',
+        '/3.png',
+        '/4.png',
+        '/5.png',
         '/6.png',
-        '/atoni16specialperformance.png',
-        '/atoni16.png'
+        '/7.png',
+        '/8.png',
     ]
 };
 
@@ -70,7 +70,7 @@ async function init() {
         return;
     }
     console.log("✅ Supabase Connected to:", supabaseUrl);
-    
+
     generateQRCode();
     renderSlider(); // Render slider from config
     try {
@@ -91,14 +91,14 @@ async function init() {
 function renderSlider() {
     const track = document.getElementById('slider-track');
     if (!track) return;
-    
+
     // Create the images from config
     const imagesHtml = SLIDER_CONFIG.images.map(src => `<img src="${src}" alt="Highlight">`).join('');
     track.innerHTML = imagesHtml;
-    
+
     // Adjust track width based on image count
     track.style.width = `${SLIDER_CONFIG.images.length * 100}%`;
-    
+
     // Update CSS animation if needed (though the CSS is hardcoded for 8 images, 
     // we'll keep it simple for now as per user request to change photos easily)
 }
@@ -116,7 +116,7 @@ function setupCanvas(canvas) {
 function generateQRCode() {
     const qrContainer = document.getElementById('qrcode');
     if (!qrContainer) return;
-    
+
     QRCode.toCanvas(window.location.href, {
         width: 150,
         margin: 2,
@@ -171,13 +171,13 @@ function subscribeToChanges() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'registrations' }, payload => {
             const newEntry = payload.new;
             console.log("New registration received (main):", newEntry.full_name);
-            
+
             state.entries.unshift(newEntry);
-            
+
             // Fix: remove placeholder if it's the first real entry
             if (names[0] === "Join the Contest!") names = [];
             names.unshift(newEntry.full_name);
-            
+
             addEntryToRoulette(newEntry);
             updateEntryCount();
             if (canvas) drawWheel();
@@ -312,9 +312,9 @@ registrationForm.addEventListener('submit', async (e) => {
         submitBtn.textContent = 'Saving Registration...';
         const { error: insertError } = await supabase
             .from('registrations')
-            .insert([{ 
-                full_name: name, 
-                email: email, 
+            .insert([{
+                full_name: name,
+                email: email,
                 phone: phone,
                 screenshot_url: publicUrl
             }]);
@@ -329,9 +329,9 @@ registrationForm.addEventListener('submit', async (e) => {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ 
-                    full_name: name, 
-                    email: email, 
+                body: JSON.stringify({
+                    full_name: name,
+                    email: email,
                     phone: phone,
                     screenshot_url: publicUrl,
                     timestamp: new Date().toISOString()
@@ -388,19 +388,19 @@ function drawWheel() {
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = i % 2 === 0 ? '#c5a059' : '#fff';
-            
+
             // Subtle shadow for that "smooth" high-end feel
             ctx.shadowColor = 'rgba(0,0,0,0.3)';
             ctx.shadowBlur = 2;
-            
+
             // 1. Initial Font Size Calculation
-            let fontSize = Math.max(9, 24 - names.length/4);
-            
+            let fontSize = Math.max(9, 24 - names.length / 4);
+
             // 2. Prep Text (Split if long and has space)
             const cleanName = name.toUpperCase().trim();
             const words = cleanName.split(' ');
             let lines = [cleanName];
-            
+
             if (cleanName.length > 14 && words.length > 1) {
                 const mid = Math.ceil(words.length / 2);
                 lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
@@ -408,7 +408,7 @@ function drawWheel() {
 
             // 3. Final Shrink-to-Fit Check
             ctx.font = `800 ${fontSize}px Inter`;
-            let maxWidth = radius - 50; 
+            let maxWidth = radius - 50;
             let currentMaxWidth = 0;
             lines.forEach(l => {
                 const w = ctx.measureText(l).width;
@@ -428,7 +428,7 @@ function drawWheel() {
             } else {
                 ctx.fillText(lines[0], radius - 30, 0);
             }
-            
+
             ctx.restore();
         }
 
@@ -444,28 +444,28 @@ function drawWheel() {
 
 function startSpin(prize, winnerName) {
     if (isSpinning) return;
-    
+
     // Ensure names are fresh before calculation
     fetchInitialEntries().then(() => {
         isSpinning = true;
         spinStartTime = Date.now();
         startRotation = rotation % (Math.PI * 2);
         lastActionTime = Date.now();
-        
+
         if (rouletteStatus) rouletteStatus.textContent = `🎰 SPINNING FOR: ${prize}`;
-        
+
         const winnerIndex = names.indexOf(winnerName);
         if (winnerIndex !== -1) {
             const step = (Math.PI * 2) / names.length;
-            
+
             // Goal: land with pointer (1.5 * PI) at winnerCenter
             // We want the winner's slice center to be exactly at 1.5 * PI (270 degrees)
             // The position of the winner slice is winnerIndex * step
             const winnerCenter = (winnerIndex * step) + (step / 2);
-            
+
             // The rotation needed to bring winnerCenter to 1.5 * PI is:
             targetAngle = (Math.PI * 1.5) - winnerCenter;
-            
+
             // Normalize target
             while (targetAngle < 0) targetAngle += Math.PI * 2;
             targetAngle %= Math.PI * 2;
@@ -475,7 +475,7 @@ function startSpin(prize, winnerName) {
             const extraSpins = 7 + Math.floor(Math.random() * 5);
             let dist = targetAngle - startRotation;
             while (dist < 0) dist += Math.PI * 2;
-            
+
             totalRotation = (extraSpins * Math.PI * 2) + dist;
         }
     });
@@ -483,24 +483,24 @@ function startSpin(prize, winnerName) {
 
 function animate() {
     const now = Date.now();
-    
+
     if (isSpinning) {
         const elapsed = now - spinStartTime;
         const progress = Math.min(elapsed / SPIN_DURATION, 1);
-        
+
         // Quintic out for much smoother, more "natural" glide to stop
         const easeOutQuint = 1 - Math.pow(1 - progress, 5);
-        
+
         rotation = startRotation + (totalRotation * easeOutQuint);
 
         // Sound tick based on steps - adjust volume based on speed
         const currentStep = Math.floor((rotation * names.length) / (Math.PI * 2));
         if (currentStep !== animate.lastStep) {
-            if (soundTick) { 
-                soundTick.currentTime = 0; 
+            if (soundTick) {
+                soundTick.currentTime = 0;
                 // Fade out sound as it slows down
                 soundTick.volume = Math.max(0.1, 1 - progress);
-                soundTick.play().catch(() => {}); 
+                soundTick.play().catch(() => { });
             }
             animate.lastStep = currentStep;
         }
@@ -514,7 +514,7 @@ function animate() {
         const idleSpeed = (now - lastActionTime > 10000) ? 0.01 : 0.002;
         rotation += idleSpeed;
     }
-    
+
     drawWheel();
     requestAnimationFrame(animate);
 }
@@ -544,7 +544,7 @@ async function fetchRecentWinners() {
 
     const winnersFeed = document.getElementById('winners-feed');
     if (!winnersFeed) return;
-    
+
     winnersFeed.innerHTML = '';
     if (data.length === 0) {
         winnersFeed.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 1rem;">No winners yet. Be the first!</p>';
@@ -572,7 +572,7 @@ function renderWinnerItem(w, isNew = false) {
     item.id = `winner-${w.id}`;
     item.className = 'winner-item';
     const time = new Date(w.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+
     item.innerHTML = `
         <div class="winner-info">
             <span class="winner-name-text">${w.winner_name}</span>
@@ -600,7 +600,7 @@ function addEntryToRoulette(entry) {
         <span class="entry-time">${new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
     `;
     rouletteList?.prepend(item);
-    
+
     // Remove flash class after animation finishes
     setTimeout(() => item.classList.remove('new-entry-flash'), 2000);
 }
