@@ -7,6 +7,20 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Easy Configuration: Change Slider Photos Here
+const SLIDER_CONFIG = {
+    images: [
+        '/cookies.png',
+        '/jayrsiaboc.png',
+        '/midnasty.png',
+        '/mistalefty.png',
+        '/winstonlee.png',
+        '/6.png',
+        '/atoni16specialperformance.png',
+        '/atoni16.png'
+    ]
+};
+
 // State Management
 let currentStep = 1;
 const state = {
@@ -58,10 +72,11 @@ async function init() {
     console.log("✅ Supabase Connected to:", supabaseUrl);
     
     generateQRCode();
+    renderSlider(); // Render slider from config
     try {
         await fetchInitialEntries();
         await fetchRecentWinners();
-        await fetchPrizes(); // NEW: Load prizes
+        // fetchPrizes(); // Removed in favor of static Giveaway.png
         subscribeToChanges();
         if (canvas) {
             setupCanvas(canvas);
@@ -71,6 +86,21 @@ async function init() {
     } catch (e) {
         console.error("❌ Initialization failed:", e);
     }
+}
+
+function renderSlider() {
+    const track = document.getElementById('slider-track');
+    if (!track) return;
+    
+    // Create the images from config
+    const imagesHtml = SLIDER_CONFIG.images.map(src => `<img src="${src}" alt="Highlight">`).join('');
+    track.innerHTML = imagesHtml;
+    
+    // Adjust track width based on image count
+    track.style.width = `${SLIDER_CONFIG.images.length * 100}%`;
+    
+    // Update CSS animation if needed (though the CSS is hardcoded for 8 images, 
+    // we'll keep it simple for now as per user request to change photos easily)
 }
 
 function setupCanvas(canvas) {
@@ -130,20 +160,8 @@ async function fetchPrizes() {
 }
 
 function renderPrizes(prizes) {
-    const display = document.getElementById('prizes-display');
-    if (!display) return;
-
-    if (prizes.length === 0) {
-        display.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-muted); font-size: 0.8rem;">More prizes coming soon!</div>';
-        return;
-    }
-
-    display.innerHTML = prizes.map(p => `
-        <div class="prize-badge">
-            <div class="icon">🎁</div>
-            <div class="name">${p.name}</div>
-        </div>
-    `).join('');
+    // Disabled: Using static Giveaway.png in index.html
+    return;
 }
 
 function subscribeToChanges() {

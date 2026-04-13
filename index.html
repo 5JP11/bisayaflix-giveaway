@@ -18,13 +18,10 @@
                 <h1 style="font-size: 2.2rem; margin-bottom: 0.5rem;">BisayaFlix Exclusive Giveaway!</h1>
                 <p style="font-size: 1.1rem; color: #fff; margin-bottom: 1.5rem;">Win exclusive prizes by following these 4 Simple Steps:</p>
                 
-                <!-- NEW: Dynamic Prize Showcase -->
-                <div style="margin-bottom: 2.5rem;">
-                    <h3 style="color: var(--primary-gold); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;">🎁 Prizes You Can Win</h3>
-                    <div id="prizes-display" class="prizes-display">
-                        <!-- Dynamically populated -->
-                        <div style="grid-column: 1/-1; color: var(--text-muted); font-size: 0.8rem;">Loading exclusive prizes...</div>
-                    </div>
+                <!-- NEW: Giveaway Image Showcase -->
+                <div style="margin: 1.5rem 0 2.5rem 0;">
+                    <h3 style="color: var(--primary-gold); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">🎁 Prizes You Can Win</h3>
+                    <img src="/Giveaway.png" alt="Prizes Giveaway" style="width: 100%; border-radius: 15px; border: 1px solid var(--glass-border); box-shadow: var(--glow-gold);">
                 </div>
                 
                 <div class="instruction-steps">
@@ -49,29 +46,6 @@
                 <p style="font-size: 0.85rem; margin-top: 1rem; color: var(--primary-gold);">Wait 1 second for the Store to open after clicking!</p>
             </div>
         </section>
-
-        <!-- Highlights Slider (SECOND) -->
-        <section id="highlights" class="card">
-            <h2 style="text-align: center;">Experience Bisaya Cinema</h2>
-            <div class="highlights-slider">
-                <div class="slider-track">
-                    <img src="/cookies.png" alt="Highlight">
-                    <img src="/jayrsiaboc.png" alt="Highlight">
-                    <img src="/midnasty.png" alt="Highlight">
-                    <img src="/mistalefty.png" alt="Highlight">
-                    <img src="/winstonlee.png" alt="Highlight">
-                    <img src="/6.png" alt="Highlight">
-                    <img src="/atoni16specialperformance.png" alt="Highlight">
-                    <img src="/atoni16.png" alt="Highlight">
-                </div>
-            </div>
-        </section>
-
-        <!-- Logo (THIRD) -->
-        <header class="logo-container">
-            <img src="/Bisayaflix-logo.png" alt="BisayaFlix Original Logo">
-            <p>The Home of Bisaya Cinema</p>
-        </header>
 
         <main id="app">
             <!-- Step 2: Registration (Modal) -->
@@ -162,6 +136,22 @@
                     <p style="text-align: center; color: var(--text-muted); padding: 1rem;">No winners yet. Be the first!</p>
                 </div>
             </section>
+
+            <!-- Highlights Slider (Moved Down) -->
+            <section id="highlights" class="card">
+                <h2 style="text-align: center;">Experience Bisaya Cinema</h2>
+                <div class="highlights-slider">
+                    <div id="slider-track" class="slider-track">
+                        <!-- Dynamically populated via SLIDER_CONFIG in main.js -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logo (Moved Down) -->
+            <header class="logo-container">
+                <img src="/Bisayaflix-logo.png" alt="BisayaFlix Original Logo">
+                <p>The Home of Bisaya Cinema</p>
+            </header>
         </main>
 
         <section id="faq" class="card">
