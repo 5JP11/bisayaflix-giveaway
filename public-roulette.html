@@ -24,31 +24,44 @@
         <h1 style="font-size: 1.5rem; margin-top: 0.5rem;">Live Roulette Giveaway</h1>
     </header>
 
-    <div class="wheel-container">
-        <div class="pointer"></div>
-        <canvas id="wheel-canvas" width="800" height="800"></canvas>
-    </div>
-
-    <div class="prize-info">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <div id="sync-status" style="font-size: 0.6rem; color: #444; display: flex; align-items: center; gap: 5px;">
-                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #444;" id="sync-dot"></span>
-                SYNC OFFLINE
+    <div class="page-with-sidebar">
+        <!-- Left Sidebar: Prizes -->
+        <aside class="sidebar-panel">
+            <h2 class="sidebar-title">🎁 Prizes To Win</h2>
+            <div id="prizes-sidebar-list" class="sidebar-prizes-list">
+                <p style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">Loading prizes...</p>
             </div>
-            <div style="font-size: 0.7rem; color: var(--primary-gold); font-weight: 800;">
-                <span id="participant-count">0</span> PARTICIPANTS
-            </div>
-        </div>
-        <div style="font-size: 0.8rem; letter-spacing: 2px; color: var(--text-muted);">CURRENT PRIZE</div>
-        <div id="current-prize-display">Waiting for Spin...</div>
-    </div>
+        </aside>
 
-    <!-- Winners Feed for Public Roulette -->
-    <div id="winners" style="width: 100%; max-width: 600px; margin-top: 2rem;">
-        <h3 style="color: var(--primary-gold); text-align: center; margin-bottom: 1rem; font-size: 1rem;">🏆 RECENT WINNERS</h3>
-        <div id="winners-feed" class="winners-feed">
-            <p style="text-align: center; color: var(--text-muted); padding: 1rem; font-size: 0.8rem;">Ready for the next winner!</p>
-        </div>
+        <!-- Center: Roulette Wheel -->
+        <main style="display: flex; flex-direction: column; align-items: center;">
+            <div class="wheel-container">
+                <div class="pointer"></div>
+                <canvas id="wheel-canvas" width="800" height="800"></canvas>
+            </div>
+
+            <div class="prize-info">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div id="sync-status" style="font-size: 0.6rem; color: #444; display: flex; align-items: center; gap: 5px;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #444;" id="sync-dot"></span>
+                        SYNC OFFLINE
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--primary-gold); font-weight: 800;">
+                        <span id="participant-count">0</span> PARTICIPANTS
+                    </div>
+                </div>
+                <div style="font-size: 0.8rem; letter-spacing: 2px; color: var(--text-muted);">CURRENT PRIZE</div>
+                <div id="current-prize-display">Waiting for Spin...</div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar: Winners Feed -->
+        <aside class="sidebar-panel">
+            <h2 class="sidebar-title">🏆 Recent Winners</h2>
+            <div id="winners-feed" class="winners-feed" style="margin-top: 0; background: none; border: none; padding: 0;">
+                <p style="text-align: center; color: var(--text-muted); padding: 1rem; font-size: 0.8rem;">Ready for the next winner!</p>
+            </div>
+        </aside>
     </div>
 
     <div id="winner-panel" class="winner-panel">
@@ -112,9 +125,11 @@
 
             await fetchRegistrants();
             await fetchRecentWinners();
+            await fetchPrizes(); // NEW: Load prizes
             setupCanvas(canvas);
             drawWheel();
             listenForSpins();
+            listenForPrizes(); // NEW: Realtime for prizes
             animate();
         }
 
@@ -192,6 +207,41 @@
             ctx.strokeStyle = '#c5a059';
             ctx.lineWidth = 5;
             ctx.stroke();
+        }
+
+        async function fetchPrizes() {
+            const { data, error } = await supabase.from('prizes').select('*').order('name', { ascending: true });
+            if (error) {
+                console.error('Error fetching prizes:', error);
+                return;
+            }
+            renderPrizes(data);
+        }
+
+        function renderPrizes(prizes) {
+            const list = document.getElementById('prizes-sidebar-list');
+            if (!list) return;
+
+            if (prizes.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.8rem;">Stay tuned for more prizes!</p>';
+                return;
+            }
+
+            list.innerHTML = prizes.map(p => `
+                <div class="sidebar-prize-item">
+                    <span style="font-size: 1.2rem;">🎁</span>
+                    <span>${p.name}</span>
+                </div>
+            `).join('');
+        }
+
+        function listenForPrizes() {
+            supabase
+                .channel('prizes-feed')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'prizes' }, () => {
+                    fetchPrizes();
+                })
+                .subscribe();
         }
 
         function listenForSpins() {

@@ -529,3 +529,133 @@ p {
     gap: 20px;
   }
 }
+/* Prize Showcase */
+.prizes-display {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 15px;
+  margin-top: 1.5rem;
+}
+
+.prize-badge {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.2rem 1rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.prize-badge:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary-gold);
+  transform: translateY(-5px);
+  box-shadow: var(--glow-gold);
+}
+
+.prize-badge .icon {
+  font-size: 1.5rem;
+  color: var(--primary-gold);
+  background: rgba(197, 160, 89, 0.1);
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.prize-badge .name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prize-badge::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.05), transparent);
+  transform: translateX(-100%);
+  transition: 0.5s;
+}
+
+.prize-badge:hover::after {
+  transform: translateX(100%);
+}
+
+/* Sidebar Layout for Prizes */
+.page-with-sidebar {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  max-width: 1200px;
+  gap: 2rem;
+  padding: 20px;
+}
+
+@media (min-width: 1024px) {
+  .page-with-sidebar {
+    grid-template-columns: 300px 1fr 300px;
+    align-items: start;
+  }
+}
+
+.sidebar-panel {
+  background: var(--card-bg);
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 1.5rem;
+  position: sticky;
+  top: 20px;
+}
+
+.sidebar-title {
+  color: var(--primary-gold);
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.sidebar-prizes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-prize-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.sidebar-prize-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary-gold);
+}
+
+.sidebar-prize-item i {
+  color: var(--primary-gold);
+}

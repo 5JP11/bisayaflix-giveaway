@@ -61,6 +61,7 @@ async function init() {
     try {
         await fetchInitialEntries();
         await fetchRecentWinners();
+        await fetchPrizes(); // NEW: Load prizes
         subscribeToChanges();
         if (canvas) {
             setupCanvas(canvas);
@@ -112,6 +113,37 @@ async function fetchInitialEntries() {
     names = data.length > 0 ? data.map(r => r.full_name) : ["Join the Contest!"];
     updateEntryCount();
     renderEntries();
+}
+
+async function fetchPrizes() {
+    const { data, error } = await supabase
+        .from('prizes')
+        .select('*')
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error('Error fetching prizes:', error);
+        return;
+    }
+
+    renderPrizes(data);
+}
+
+function renderPrizes(prizes) {
+    const display = document.getElementById('prizes-display');
+    if (!display) return;
+
+    if (prizes.length === 0) {
+        display.innerHTML = '<div style="grid-column: 1/-1; color: var(--text-muted); font-size: 0.8rem;">More prizes coming soon!</div>';
+        return;
+    }
+
+    display.innerHTML = prizes.map(p => `
+        <div class="prize-badge">
+            <div class="icon">🎁</div>
+            <div class="name">${p.name}</div>
+        </div>
+    `).join('');
 }
 
 function subscribeToChanges() {
@@ -168,6 +200,14 @@ function subscribeToChanges() {
         })
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'winners' }, () => {
             fetchRecentWinners();
+        })
+        .subscribe();
+
+    // 4. Listen for prize updates
+    supabase
+        .channel('prizes-feed')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'prizes' }, () => {
+            fetchPrizes();
         })
         .subscribe();
 }
