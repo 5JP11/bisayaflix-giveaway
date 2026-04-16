@@ -385,7 +385,7 @@ function drawWheel() {
             ctx.save();
             ctx.translate(centerX, centerY);
             ctx.rotate(startAngle + step / 2);
-            ctx.textAlign = 'right';
+            ctx.textAlign = 'left';  // text grows outward from center
             ctx.textBaseline = 'middle';
             ctx.fillStyle = i % 2 === 0 ? '#c5a059' : '#fff';
 
@@ -393,40 +393,42 @@ function drawWheel() {
             ctx.shadowColor = 'rgba(0,0,0,0.3)';
             ctx.shadowBlur = 2;
 
-            // 1. Initial Font Size Calculation
-            let fontSize = Math.max(9, 24 - names.length / 4);
+            // 1. Initial Font Size Calculation (slightly reduced)
+            let fontSize = Math.max(8, 20 - names.length / 4);
 
             // 2. Prep Text (Split if long and has space)
             const cleanName = name.toUpperCase().trim();
             const words = cleanName.split(' ');
             let lines = [cleanName];
 
-            if (cleanName.length > 14 && words.length > 1) {
+            if (cleanName.length > 12 && words.length > 1) {
                 const mid = Math.ceil(words.length / 2);
                 lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
             }
 
             // 3. Final Shrink-to-Fit Check
+            // maxWidth = available radial space from start offset to near edge
+            const textStartX = 20; // small gap from center
+            const textMaxW = radius - textStartX - 20; // leave 20px margin at outer edge
             ctx.font = `800 ${fontSize}px Inter`;
-            let maxWidth = radius - 50;
             let currentMaxWidth = 0;
             lines.forEach(l => {
                 const w = ctx.measureText(l).width;
                 if (w > currentMaxWidth) currentMaxWidth = w;
             });
 
-            if (currentMaxWidth > maxWidth) {
-                fontSize *= (maxWidth / currentMaxWidth);
+            if (currentMaxWidth > textMaxW) {
+                fontSize *= (textMaxW / currentMaxWidth);
                 ctx.font = `800 ${fontSize}px Inter`;
             }
 
-            // 4. Draw!
+            // 4. Draw! (text starts at textStartX from center, grows toward outer edge)
             if (lines.length > 1) {
                 const spacing = fontSize * 0.6;
-                ctx.fillText(lines[1], radius - 30, spacing);
-                ctx.fillText(lines[0], radius - 30, -spacing);
+                ctx.fillText(lines[0], textStartX, -spacing, textMaxW);
+                ctx.fillText(lines[1], textStartX, spacing, textMaxW);
             } else {
-                ctx.fillText(lines[0], radius - 30, 0);
+                ctx.fillText(lines[0], textStartX, 0, textMaxW);
             }
 
             ctx.restore();
