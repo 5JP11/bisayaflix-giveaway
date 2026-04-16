@@ -380,53 +380,49 @@ function drawWheel() {
         ctx.strokeStyle = '#333';
         ctx.stroke();
 
-        // Improved Name Rendering (Dynamic Scale + Multi-line)
+        // Name Rendering — geometry-based font size
         if (names.length < 300) {
             ctx.save();
             ctx.translate(centerX, centerY);
             ctx.rotate(startAngle + step / 2);
-            ctx.textAlign = 'left';  // text grows outward from center
+            ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = i % 2 === 0 ? '#c5a059' : '#fff';
-
-            // Subtle shadow for that "smooth" high-end feel
             ctx.shadowColor = 'rgba(0,0,0,0.3)';
             ctx.shadowBlur = 2;
 
-            // 1. Initial Font Size Calculation (slightly reduced)
-            let fontSize = Math.max(8, 20 - names.length / 4);
+            // 1. Font size derived from segment arc height at mid-radius
+            //    arcHeight = 2 * midR * sin(step/2)
+            const midR = radius * 0.65;
+            const arcHeight = 2 * midR * Math.sin(step / 2);
+            let fontSize = Math.min(9, Math.max(5, arcHeight * 0.38));
 
-            // 2. Prep Text (Split if long and has space)
+            // 2. Split long names at word boundary
             const cleanName = name.toUpperCase().trim();
             const words = cleanName.split(' ');
             let lines = [cleanName];
-
-            if (cleanName.length > 12 && words.length > 1) {
+            if (cleanName.length > 10 && words.length > 1) {
                 const mid = Math.ceil(words.length / 2);
                 lines = [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
             }
 
-            // 3. Final Shrink-to-Fit Check
-            // maxWidth = available radial space from start offset to near edge
-            const textStartX = 20; // small gap from center
-            const textMaxW = radius - textStartX - 20; // leave 20px margin at outer edge
-            ctx.font = `800 ${fontSize}px Inter`;
-            let currentMaxWidth = 0;
-            lines.forEach(l => {
-                const w = ctx.measureText(l).width;
-                if (w > currentMaxWidth) currentMaxWidth = w;
-            });
-
-            if (currentMaxWidth > textMaxW) {
-                fontSize *= (textMaxW / currentMaxWidth);
-                ctx.font = `800 ${fontSize}px Inter`;
+            // 3. Shrink text width to fit the segment radial span
+            //    Text lives in outer 55% of the radius
+            const textStartX = radius * 0.38;
+            const textMaxW = radius * 0.55;
+            ctx.font = `700 ${fontSize}px Inter`;
+            let maxMeasured = 0;
+            lines.forEach(l => { maxMeasured = Math.max(maxMeasured, ctx.measureText(l).width); });
+            if (maxMeasured > textMaxW) {
+                fontSize *= textMaxW / maxMeasured;
+                ctx.font = `700 ${fontSize}px Inter`;
             }
 
-            // 4. Draw! (text starts at textStartX from center, grows toward outer edge)
+            // 4. Draw — hard-cap width via fillText maxWidth param
             if (lines.length > 1) {
-                const spacing = fontSize * 0.6;
-                ctx.fillText(lines[0], textStartX, -spacing, textMaxW);
-                ctx.fillText(lines[1], textStartX, spacing, textMaxW);
+                const gap = fontSize * 0.65;
+                ctx.fillText(lines[0], textStartX, -gap, textMaxW);
+                ctx.fillText(lines[1], textStartX, gap, textMaxW);
             } else {
                 ctx.fillText(lines[0], textStartX, 0, textMaxW);
             }
