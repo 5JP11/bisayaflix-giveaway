@@ -79,7 +79,6 @@ async function init() {
         // fetchPrizes(); // Removed in favor of static Giveaway.png
         subscribeToChanges();
         if (canvas) {
-            setupCanvas(canvas);
             drawWheel();
             animate();
         }
@@ -357,14 +356,12 @@ registrationForm.addEventListener('submit', async (e) => {
 // Roulette Wheel Logic
 function drawWheel() {
     if (!canvas || !ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
     const radius = Math.min(centerX, centerY) - 10;
     const step = (Math.PI * 2) / names.length;
 
-    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     names.forEach((name, i) => {
         const startAngle = rotation + i * step;
